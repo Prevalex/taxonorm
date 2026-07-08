@@ -1,0 +1,6 @@
+#[tool.ruff]
+# Only check files in these directories
+#include = ["src/**/*.py", "tests/**/*.py"]
+include = ["*.py"]
+# Optionally, exclude other directories just in case
+exclude = ["zArc"]

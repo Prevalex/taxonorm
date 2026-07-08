@@ -1,0 +1,524 @@
+[
+    [
+        222,
+        {
+            "en_US": "Electronics"
+        }
+    ],
+    [
+        222,
+        223,
+        {
+            "en_US": "Audio"
+        }
+    ],
+    [
+        222,
+        223,
+        1420,
+        {
+            "en_US": "Audio Accessories"
+        }
+    ],
+    [
+        222,
+        223,
+        1420,
+        232,
+        {
+            "en_US": "MP3 Player Accessories"
+        }
+    ],
+    [
+        222,
+        223,
+        1420,
+        232,
+        3055,
+        {
+            "en_US": "MP3 Player Cases"
+        }
+    ],
+    [
+        222,
+        223,
+        1420,
+        232,
+        7566,
+        {
+            "en_US": "MP3 Player & Mobile Phone Accessory Sets"
+        }
+    ],
+    [
+        222,
+        223,
+        1420,
+        3306,
+        {
+            "en_US": "Microphone Accessories"
+        }
+    ],
+    [
+        222,
+        223,
+        1420,
+        5395,
+        {
+            "en_US": "Karaoke System Accessories"
+        }
+    ],
+    [
+        222,
+        223,
+        1420,
+        5395,
+        5396,
+        {
+            "en_US": "Karaoke Chips"
+        }
+    ],
+    [
+        222,
+        223,
+        1420,
+        7163,
+        {
+            "en_US": "Speaker Accessories"
+        }
+    ],
+    [
+        222,
+        223,
+        1420,
+        7163,
+        500112,
+        {
+            "en_US": "Speaker Bags, Covers & Cases"
+        }
+    ],
+    [
+        222,
+        223,
+        1420,
+        7163,
+        500120,
+        {
+            "en_US": "Speaker Components & Kits"
+        }
+    ],
+    [
+        222,
+        223,
+        2165,
+        {
+            "en_US": "Audio Components"
+        }
+    ],
+    [
+        222,
+        223,
+        2165,
+        224,
+        {
+            "en_US": "Audio Amplifiers"
+        }
+    ],
+    [
+        222,
+        223,
+        2165,
+        224,
+        4493,
+        {
+            "en_US": "Headphone Amplifiers"
+        }
+    ],
+    [
+        222,
+        223,
+        2165,
+        224,
+        5381,
+        {
+            "en_US": "Power Amplifiers"
+        }
+    ],
+    [
+        222,
+        223,
+        2165,
+        234,
+        {
+            "en_US": "Microphones"
+        }
+    ],
+    [
+        222,
+        223,
+        2165,
+        241,
+        {
+            "en_US": "Audio & Video Receivers"
+        }
+    ],
+    [
+        222,
+        223,
+        2165,
+        246,
+        {
+            "en_US": "Signal Processors"
+        }
+    ],
+    [
+        222,
+        223,
+        2165,
+        246,
+        247,
+        {
+            "en_US": "Effects Processors"
+        }
+    ],
+    [
+        222,
+        223,
+        2165,
+        246,
+        5435,
+        {
+            "en_US": "Crossovers"
+        }
+    ],
+    [
+        222,
+        223,
+        2165,
+        249,
+        {
+            "en_US": "Speakers"
+        }
+    ],
+    [
+        222,
+        223,
+        2165,
+        6545,
+        {
+            "en_US": "Channel Strips"
+        }
+    ],
+    [
+        222,
+        223,
+        2165,
+        505771,
+        {
+            "en_US": "Headphones & Headsets"
+        }
+    ],
+    [
+        222,
+        223,
+        2165,
+        505771,
+        543626,
+        {
+            "en_US": "Headphones"
+        }
+    ],
+    [
+        222,
+        223,
+        2165,
+        505771,
+        543627,
+        {
+            "en_US": "Headsets"
+        }
+    ],
+    [
+        222,
+        262,
+        {
+            "en_US": "Communications"
+        }
+    ],
+    [
+        222,
+        262,
+        266,
+        {
+            "en_US": "Answering Machines"
+        }
+    ],
+    [
+        222,
+        262,
+        270,
+        {
+            "en_US": "Telephony"
+        }
+    ],
+    [
+        222,
+        262,
+        270,
+        264,
+        {
+            "en_US": "Mobile Phone Accessories"
+        }
+    ],
+    [
+        222,
+        262,
+        270,
+        264,
+        6030,
+        {
+            "en_US": "Mobile Phone Pre-Paid Cards & SIM Cards"
+        }
+    ],
+    [
+        222,
+        262,
+        270,
+        264,
+        6030,
+        543515,
+        {
+            "en_US": "Mobile Phone Pre-Paid Cards"
+        }
+    ],
+    [
+        222,
+        262,
+        270,
+        271,
+        {
+            "en_US": "Corded Phones"
+        }
+    ],
+    [
+        222,
+        262,
+        270,
+        272,
+        {
+            "en_US": "Cordless Phones"
+        }
+    ],
+    [
+        222,
+        262,
+        270,
+        4666,
+        {
+            "en_US": "Conference Phones"
+        }
+    ],
+    [
+        222,
+        262,
+        2471,
+        {
+            "en_US": "Communication Radios"
+        }
+    ],
+    [
+        222,
+        262,
+        2471,
+        2106,
+        {
+            "en_US": "CB Radios"
+        }
+    ],
+    [
+        222,
+        262,
+        2471,
+        4415,
+        {
+            "en_US": "Radio Scanners"
+        }
+    ],
+    [
+        222,
+        262,
+        5404,
+        {
+            "en_US": "Intercom Accessories"
+        }
+    ],
+    [
+        222,
+        3356,
+        {
+            "en_US": "Arcade Equipment"
+        }
+    ],
+    [
+        222,
+        3356,
+        3946,
+        {
+            "en_US": "Pinball Machine Accessories"
+        }
+    ],
+    [
+        222,
+        3356,
+        8085,
+        {
+            "en_US": "Basketball Arcade Games"
+        }
+    ],
+    [
+        412,
+        {
+            "en_US": "Food, Beverages & Tobacco"
+        }
+    ],
+    [
+        412,
+        413,
+        {
+            "en_US": "Beverages"
+        }
+    ],
+    [
+        412,
+        413,
+        499676,
+        {
+            "en_US": "Alcoholic Beverages"
+        }
+    ],
+    [
+        412,
+        413,
+        499676,
+        414,
+        {
+            "en_US": "Beer"
+        }
+    ],
+    [
+        412,
+        413,
+        499676,
+        417,
+        {
+            "en_US": "Liquor & Spirits"
+        }
+    ],
+    [
+        412,
+        413,
+        499676,
+        417,
+        2364,
+        {
+            "en_US": "Brandy"
+        }
+    ],
+    [
+        412,
+        413,
+        499676,
+        417,
+        502976,
+        {
+            "en_US": "Shochu & Soju"
+        }
+    ],
+    [
+        412,
+        413,
+        499676,
+        417,
+        502976,
+        543642,
+        {
+            "en_US": "Shochu"
+        }
+    ],
+    [
+        412,
+        413,
+        499676,
+        417,
+        502976,
+        543643,
+        {
+            "en_US": "Soju"
+        }
+    ],
+    [
+        412,
+        413,
+        499676,
+        417,
+        505761,
+        {
+            "en_US": "Absinthe"
+        }
+    ],
+    [
+        412,
+        413,
+        499676,
+        5725,
+        {
+            "en_US": "Cocktail Mixes"
+        }
+    ],
+    [
+        412,
+        413,
+        499676,
+        5725,
+        543536,
+        {
+            "en_US": "Shelf-stable Cocktail Mixes"
+        }
+    ],
+    [
+        412,
+        413,
+        499676,
+        5725,
+        543537,
+        {
+            "en_US": "Frozen Cocktail Mixes"
+        }
+    ],
+    [
+        412,
+        413,
+        499676,
+        5887,
+        {
+            "en_US": "Flavored Alcoholic Beverages"
+        }
+    ],
+    [
+        412,
+        413,
+        499676,
+        6761,
+        {
+            "en_US": "Hard Cider"
+        }
+    ],
+    [
+        412,
+        413,
+        499676,
+        7486,
+        {
+            "en_US": "Bitters"
+        }
+    ]
+]

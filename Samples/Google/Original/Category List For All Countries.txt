@@ -1,0 +1,61 @@
+Google Shopping Product Category List For All Countries
+https://feedarmy.com/kb/google-merchant-taxonomy-list-for-all-countries/
++ https://webappick.com/google-product-category-taxonomy-guide/
+
+With ID’s
+
+Argentina: https://www.google.com/basepages/producttype/taxonomy-with-ids.en-US.xls
+Australia: https://www.google.com/basepages/producttype/taxonomy-with-ids.en-GB.xls
+Austria: http://www.google.com/basepages/producttype/taxonomy-with-ids.de-DE.txt
+Belgium:
+French: https://www.google.com/basepages/producttype/taxonomy-with-ids.fr-FR.xls
+Dutch: http://www.google.com/basepages/producttype/taxonomy-with-ids.nl-NL.txt
+Brazil: https://www.google.com/basepages/producttype/taxonomy-with-ids.pt-BR.xls
+Canada:
+English: https://www.google.com/basepages/producttype/taxonomy-with-ids.en-US.xls
+French: https://www.google.com/basepages/producttype/taxonomy-with-ids.fr-FR.xls
+Chile: https://www.google.com/basepages/producttype/taxonomy-with-ids.en-US.xls
+China: https://www.google.com/basepages/producttype/taxonomy-with-ids.en-US.xls
+Colombia: https://www.google.com/basepages/producttype/taxonomy-with-ids.es-ES.xls
+Czechia: http://www.google.com/basepages/producttype/taxonomy-with-ids.cs-CZ.xls
+Denmark: https://www.google.com/basepages/producttype/taxonomy-with-ids.da-DK.xls
+Finland: https://www.google.com/basepages/producttype/taxonomy-with-ids.en-US.xls
+France: https://www.google.com/basepages/producttype/taxonomy-with-ids.fr-FR.xls
+Germany: https://www.google.com/basepages/producttype/taxonomy-with-ids.de-DE.xls
+Greece: https://www.google.com/basepages/producttype/taxonomy-with-ids.en-US.xls
+Hong Kong: https://www.google.com/basepages/producttype/taxonomy-with-ids.en-US.xls
+Hungary: https://www.google.com/basepages/producttype/taxonomy-with-ids.en-US.xls
+India: https://www.google.com/basepages/producttype/taxonomy-with-ids.en-US.xls
+Indonesia: https://www.google.com/basepages/producttype/taxonomy-with-ids.en-US.xls
+Ireland: https://www.google.com/basepages/producttype/taxonomy-with-ids.en-GB.xls
+Israel: https://www.google.com/basepages/producttype/taxonomy-with-ids.en-US.xls
+Italy: https://www.google.com/basepages/producttype/taxonomy-with-ids.it-IT.xls
+Japan: https://www.google.com/basepages/producttype/taxonomy-with-ids.ja-JP.xls
+Malaysia: https://www.google.com/basepages/producttype/taxonomy-with-ids.en-US.xls
+Mexico: https://www.google.com/basepages/producttype/taxonomy-with-ids.es-ES.xls
+Netherlands: https://www.google.com/basepages/producttype/taxonomy-with-ids.nl-NL.xls
+New Zealand: http://www.google.com/basepages/producttype/taxonomy-with-ids.en-AU.xls
+Norway: https://www.google.com/basepages/producttype/taxonomy-with-ids.no-NO.txt
+Philippines: https://www.google.com/basepages/producttype/taxonomy-with-ids.en-US.xls
+Poland: https://www.google.com/basepages/producttype/taxonomy-with-ids.pl-PL.xls
+Portugal: http://www.google.com/basepages/producttype/taxonomy-with-ids.pt-BR.xls
+Romania: https://www.google.com/basepages/producttype/taxonomy-with-ids.en-US.xls
+Russia: https://www.google.com/basepages/producttype/taxonomy-with-ids.ru-RU.xls
+Saudi Arabia: https://www.google.com/basepages/producttype/taxonomy-with-ids.en-US.xls
+Singapore: https://www.google.com/basepages/producttype/taxonomy-with-ids.en-US.xls
+Slovakia: https://www.google.com/basepages/producttype/taxonomy-with-ids.en-US.xls
+South Africa: https://www.google.com/basepages/producttype/taxonomy-with-ids.en-US.xls
+Spain: https://www.google.com/basepages/producttype/taxonomy-with-ids.es-ES.xls
+Sweden: https://www.google.com/basepages/producttype/taxonomy-with-ids.sv-SE.xls
+Switzerland
+French: https://www.google.com/basepages/producttype/taxonomy-with-ids.fr-CH.xls
+German: https://www.google.com/basepages/producttype/taxonomy-with-ids.de-CH.xls
+Italian: https://www.google.com/basepages/producttype/taxonomy-with-ids.it-CH.xls
+Taiwan: https://www.google.com/basepages/producttype/taxonomy-with-ids.en-US.xls
+Thailand: https://www.google.com/basepages/producttype/taxonomy-with-ids.en-US.xls
+Turkey: https://www.google.com/basepages/producttype/taxonomy-with-ids.tr-TR.xls
+Ukraine: https://www.google.com/basepages/producttype/taxonomy-with-ids.en-US.xls
+United Arab Emirates: https://www.google.com/basepages/producttype/taxonomy-with-ids.en-US.xls
+United Kingdom: https://www.google.com/basepages/producttype/taxonomy-with-ids.en-GB.xls
+United States: https://www.google.com/basepages/producttype/taxonomy-with-ids.en-US.xls
+Vietnam: https://www.google.com/basepages/producttype/taxonomy-with-ids.en-US.xls

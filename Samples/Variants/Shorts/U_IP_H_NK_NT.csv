@@ -1,0 +1,22 @@
+﻿taxonorm,0.1.0,Sample,variants,,
+1,Household appliances,Побутова техніка
+1,11,Climate technology,Кліматична техніка
+1,11,21,Household fans,Вентилятори побутові
+1,12,Large household appliances,Велика побутова техніка
+1,12,22,Refrigeration equipment,Холодильне устаткування
+1,12,22,31,Freezers,Морозильні камери
+1,12,22,32,Refrigerators,Холодильники
+2,Electronics,Електроніка
+2,13,"Laptops, tablets, PCs","Ноутбуки, планшети, ПК"
+2,13,23,Laptops,Ноутбуки
+2,14,Audio and multimedia,Аудіо та мультимедіа
+2,14,24,Audio systems,Аудіо системи
+2,14,24,33,Subwoofers,Cабвуфери
+2,14,24,34,Microphones,Мікрофони
+3,Enterprise Solutions,Рішення Для Підприємств
+3,15,Servers,Сервери
+3,15,25,Servers,Сервери
+3,15,25,35,Tower Servers,Сервери Tower (напольні)
+3,15,25,36,Rack Servers,Сервери Rack (в стійку)
+3,15,26,Server options,Серверні опції
+3,15,26,37,Server Processors,Процесори серверів

@@ -1,0 +1,22 @@
+﻿taxonorm,0.1.0,Sample,variants,
+1,Household appliances
+11,Household appliances,Climate technology
+21,Household appliances,Climate technology,Household fans
+12,Household appliances,Large household appliances
+22,Household appliances,Large household appliances,Refrigeration equipment
+31,Household appliances,Large household appliances,Refrigeration equipment,Freezers
+32,Household appliances,Large household appliances,Refrigeration equipment,Refrigerators
+2,Electronics
+13,Electronics,"Laptops, tablets, PCs"
+23,Electronics,"Laptops, tablets, PCs",Laptops
+14,Electronics,Audio and multimedia
+24,Electronics,Audio and multimedia,Audio systems
+33,Electronics,Audio and multimedia,Audio systems,Subwoofers
+34,Electronics,Audio and multimedia,Audio systems,Microphones
+3,Enterprise Solutions
+15,Enterprise Solutions,Servers
+25,Enterprise Solutions,Servers,Servers
+35,Enterprise Solutions,Servers,Servers,Tower Servers
+36,Enterprise Solutions,Servers,Servers,Rack Servers
+26,Enterprise Solutions,Servers,Server options
+37,Enterprise Solutions,Servers,Server options,Server Processors

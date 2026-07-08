@@ -1,0 +1,21 @@
+﻿101,Household appliances,Побутова техніка
+101,1,Climate technology,Кліматична техніка
+101,1,1,Household fans,Вентилятори побутові
+101,2,Large household appliances,Велика побутова техніка
+101,2,1,Refrigeration equipment,Холодильне устаткування
+101,2,1,2,Freezers,Морозильні камери
+101,2,1,3,Refrigerators,Холодильники
+102,Electronics,Електроніка
+102,1,"Laptops, tablets, PCs","Ноутбуки, планшети, ПК"
+102,1,1,Laptops,Ноутбуки
+102,2,Audio and multimedia,Аудіо та мультимедіа
+102,2,1,Audio systems,Аудіо системи
+102,2,1,13,Subwoofers,Cабвуфери
+102,2,1,14,Microphones,Мікрофони
+103,Enterprise Solutions,Рішення Для Підприємств
+103,1,Servers,Сервери
+103,1,1,Servers,Сервери
+103,1,1,1,Tower Servers,Сервери Tower (напольні)
+103,1,1,2,Rack Servers,Сервери Rack (в стійку)
+103,1,99,Server options,Серверні опції
+103,1,99,1,Server Processors,Процесори серверів

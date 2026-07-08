@@ -1,0 +1,21 @@
+﻿101,Household appliances
+1,Household appliances,Climate technology
+1,Household appliances,Climate technology,Household fans
+2,Household appliances,Large household appliances
+1,Household appliances,Large household appliances,Refrigeration equipment
+2,Household appliances,Large household appliances,Refrigeration equipment,Freezers
+3,Household appliances,Large household appliances,Refrigeration equipment,Refrigerators
+102,Electronics
+1,Electronics,"Laptops, tablets, PCs"
+1,Electronics,"Laptops, tablets, PCs",Laptops
+2,Electronics,Audio and multimedia
+1,Electronics,Audio and multimedia,Audio systems
+13,Electronics,Audio and multimedia,Audio systems,Subwoofers
+14,Electronics,Audio and multimedia,Audio systems,Microphones
+103,Enterprise Solutions
+1,Enterprise Solutions,Servers
+1,Enterprise Solutions,Servers,Servers
+1,Enterprise Solutions,Servers,Servers,Tower Servers
+2,Enterprise Solutions,Servers,Servers,Rack Servers
+99,Enterprise Solutions,Servers,Server options
+1,Enterprise Solutions,Servers,Server options,Server Processors

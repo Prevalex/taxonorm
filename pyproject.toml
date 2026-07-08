@@ -1,0 +1,14 @@
+[build-system]
+requires = ["setuptools>=80.0.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "taxonorm"
+version = "0.1.0"
+description = "Taxonomy normalization tools"
+requires-python = ">=3.12"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["taxonorm*"]
+namespaces = false # false = requires __init__.py in a subfolder to be a subpackage

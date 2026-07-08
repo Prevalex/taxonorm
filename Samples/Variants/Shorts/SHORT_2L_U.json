@@ -1,0 +1,187 @@
+[
+    [
+        1,
+        {
+            "en_US": "Household appliances",
+            "uk_UA": "Побутова техніка"
+        }
+    ],
+    [
+        1,
+        11,
+        {
+            "en_US": "Climate technology",
+            "uk_UA": "Кліматична техніка"
+        }
+    ],
+    [
+        1,
+        11,
+        21,
+        {
+            "en_US": "Household fans",
+            "uk_UA": "Вентилятори побутові"
+        }
+    ],
+    [
+        1,
+        12,
+        {
+            "en_US": "Large household appliances",
+            "uk_UA": "Велика побутова техніка"
+        }
+    ],
+    [
+        1,
+        12,
+        22,
+        {
+            "en_US": "Refrigeration equipment",
+            "uk_UA": "Холодильне устаткування"
+        }
+    ],
+    [
+        1,
+        12,
+        22,
+        31,
+        {
+            "en_US": "Freezers",
+            "uk_UA": "Морозильні камери"
+        }
+    ],
+    [
+        1,
+        12,
+        22,
+        32,
+        {
+            "en_US": "Refrigerators",
+            "uk_UA": "Холодильники"
+        }
+    ],
+    [
+        2,
+        {
+            "en_US": "Electronics",
+            "uk_UA": "Електроніка"
+        }
+    ],
+    [
+        2,
+        13,
+        {
+            "en_US": "Laptops, tablets, PCs",
+            "uk_UA": "Ноутбуки, планшети, ПК"
+        }
+    ],
+    [
+        2,
+        13,
+        23,
+        {
+            "en_US": "Laptops",
+            "uk_UA": "Ноутбуки"
+        }
+    ],
+    [
+        2,
+        14,
+        {
+            "en_US": "Audio and multimedia",
+            "uk_UA": "Аудіо та мультимедіа"
+        }
+    ],
+    [
+        2,
+        14,
+        24,
+        {
+            "en_US": "Audio systems",
+            "uk_UA": "Аудіо системи"
+        }
+    ],
+    [
+        2,
+        14,
+        24,
+        33,
+        {
+            "en_US": "Subwoofers",
+            "uk_UA": "Cабвуфери"
+        }
+    ],
+    [
+        2,
+        14,
+        24,
+        34,
+        {
+            "en_US": "Microphones",
+            "uk_UA": "Мікрофони"
+        }
+    ],
+    [
+        3,
+        {
+            "en_US": "Enterprise Solutions",
+            "uk_UA": "Рішення Для Підприємств"
+        }
+    ],
+    [
+        3,
+        15,
+        {
+            "en_US": "Servers",
+            "uk_UA": "Сервери"
+        }
+    ],
+    [
+        3,
+        15,
+        25,
+        {
+            "en_US": "Servers",
+            "uk_UA": "Сервери"
+        }
+    ],
+    [
+        3,
+        15,
+        25,
+        35,
+        {
+            "en_US": "Tower Servers",
+            "uk_UA": "Сервери Tower (напольні)"
+        }
+    ],
+    [
+        3,
+        15,
+        25,
+        36,
+        {
+            "en_US": "Rack Servers",
+            "uk_UA": "Сервери Rack (в стійку)"
+        }
+    ],
+    [
+        3,
+        15,
+        26,
+        {
+            "en_US": "Server options",
+            "uk_UA": "Серверні опції"
+        }
+    ],
+    [
+        3,
+        15,
+        26,
+        37,
+        {
+            "en_US": "Server Processors",
+            "uk_UA": "Процесори серверів"
+        }
+    ]
+]
