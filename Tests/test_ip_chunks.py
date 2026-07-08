@@ -7,12 +7,15 @@ import pytest
 
 from taxonorm import (
     IpStyle,
+    Taxonomy,
     TxInputValidationError,
     import_taxonomy,
     parse_taxonomy,
     restore_unique_ip_chunks,
+    serialize_taxonomy,
+    split_to_unique_ip_chunks,
 )
-from taxonorm.errors import TxParsingError
+from taxonorm.errors import TxConversionError, TxParsingError
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -82,6 +85,85 @@ def test_parse_taxonomy_can_restore_ip_chunks() -> None:
         "name": "Notebook cables"
     }
     assert (1, 101) not in taxonomy
+
+
+def test_split_to_unique_ip_chunks_is_restore_inverse() -> None:
+    taxonomy = Taxonomy.from_branches(
+        [
+            [0, {"name": "Root"}],
+            [0, 1, {"name": "Notebooks"}],
+            [0, 1, 101, {"name": "Notebook parts"}],
+            [0, 1, 101, 777, {"name": "Notebook cables"}],
+            [0, 2, {"name": "Computers"}],
+            [0, 2, 201, 202, {"name": "Deep chunk"}],
+        ]
+    )
+
+    chunks = split_to_unique_ip_chunks(taxonomy, max_chunk_len=2)
+
+    assert chunks == [
+        [0, {"name": "Root"}],
+        [0, 1, {"name": "Notebooks"}],
+        [1, 101, {"name": "Notebook parts"}],
+        [101, 777, {"name": "Notebook cables"}],
+        [0, 2, {"name": "Computers"}],
+        [2, 201, {}],
+        [201, 202, {"name": "Deep chunk"}],
+    ]
+    assert restore_unique_ip_chunks(chunks) == taxonomy.to_branches()
+
+
+def test_split_to_unique_ip_chunks_rejects_duplicate_ids() -> None:
+    taxonomy = Taxonomy.from_branches(
+        [
+            ["catalog", "audio", {"name": "Audio"}],
+            ["sale", "audio", {"name": "Sale audio"}],
+        ]
+    )
+
+    with pytest.raises(TxConversionError, match="должны быть уникальны"):
+        split_to_unique_ip_chunks(taxonomy)
+
+
+@pytest.mark.parametrize("max_chunk_len", [None, 1, True, "2"])
+def test_split_to_unique_ip_chunks_rejects_invalid_max_chunk_len(max_chunk_len: Any) -> None:
+    taxonomy = Taxonomy.from_branches([[0, {"name": "Root"}]])
+
+    with pytest.raises(TxConversionError, match="max_chunk_len"):
+        split_to_unique_ip_chunks(taxonomy, max_chunk_len=max_chunk_len)
+
+
+def test_serialize_taxonomy_can_emit_restorable_ip_chunks() -> None:
+    taxonomy = Taxonomy.from_branches(
+        [
+            [0, {"name": "Root"}],
+            [0, 1, {"name": "Notebooks"}],
+            [0, 1, 101, {"name": "Notebook parts"}],
+            [0, 1, 101, 777, {"name": "Notebook cables"}],
+        ]
+    )
+    style = IpStyle(header=False, keys=False, tabbed=False)
+
+    rows = serialize_taxonomy(
+        taxonomy,
+        styler=style,
+        key_order=["name"],
+        max_chunk_len=2,
+    )
+
+    assert rows == [
+        [0, "Root"],
+        [0, 1, "Notebooks"],
+        [1, 101, "Notebook parts"],
+        [101, 777, "Notebook cables"],
+    ]
+    restored = parse_taxonomy(
+        rows,
+        styler=style,
+        leaf_keys=["name"],
+        restore_ip_chunks=True,
+    )
+    assert restored == taxonomy
 
 
 def test_ip_chunks_without_keys_reject_too_many_leaf_keys() -> None:

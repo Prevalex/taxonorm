@@ -7,7 +7,8 @@ from typing import Any
 
 from alib.validation import is_valid_keyid
 
-from taxonorm.errors import TxParsingError
+from taxonorm.errors import TxConversionError, TxParsingError
+from taxonorm.model import Taxonomy
 
 
 def _validate_chunk(chunk: Sequence[Any], row_index: int) -> tuple[tuple[Hashable, ...], dict[Hashable, Any]]:
@@ -102,3 +103,53 @@ def restore_unique_ip_chunks(chunks: Sequence[Sequence[Any]]) -> list[list[Any]]
         restored.append(list(path) + [dict(leaves_by_terminal_id[terminal_id])])
 
     return restored
+
+
+def _validate_max_chunk_len(max_chunk_len: int) -> int:
+    if isinstance(max_chunk_len, bool) or not isinstance(max_chunk_len, int):
+        raise TxConversionError(
+            f"max_chunk_len должен быть целым числом не меньше 2. Получено: {max_chunk_len!r}"
+        )
+    if max_chunk_len < 2:
+        raise TxConversionError(
+            f"max_chunk_len должен быть не меньше 2. Получено: {max_chunk_len!r}"
+        )
+    return max_chunk_len
+
+
+def _assert_unique_taxonomy_ids(taxonomy: Taxonomy) -> None:
+    seen: dict[Hashable, tuple[Hashable, ...]] = {}
+    for branch in taxonomy.iter_branches():
+        node_id = branch.path[-1]
+        previous_path = seen.get(node_id)
+        if previous_path is not None:
+            raise TxConversionError(
+                f"ID таксономии должны быть уникальны для дробления на IP-обрезки: "
+                f"{node_id!r} встречается в путях {previous_path!r} и {branch.path!r}"
+            )
+        seen[node_id] = branch.path
+
+
+def split_to_unique_ip_chunks(
+    taxonomy: Taxonomy,
+    max_chunk_len: int = 2,
+) -> list[list[Any]]:
+    """Split a taxonomy into unique-ID IP chunks.
+
+    The result uses the internal branch exchange form:
+    ``[id1, ..., idN, {leaf_key: value}]``. Each chunk contains no more than
+    ``max_chunk_len`` IDs and can be restored with ``restore_unique_ip_chunks``
+    when all node IDs in the source taxonomy are unique.
+    """
+    if not isinstance(taxonomy, Taxonomy):
+        raise TxConversionError(
+            f"Ожидался объект Taxonomy, получено: {type(taxonomy).__name__}"
+        )
+    max_chunk_len = _validate_max_chunk_len(max_chunk_len)
+    _assert_unique_taxonomy_ids(taxonomy)
+
+    chunks: list[list[Any]] = []
+    for branch in taxonomy.iter_branches():
+        chunk_path = branch.path[-max_chunk_len:]
+        chunks.append(list(chunk_path) + [dict(branch.leaves)])
+    return chunks

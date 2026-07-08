@@ -183,9 +183,10 @@ taxonomy = import_taxonomy(
 можно использовать низкоуровневую функцию:
 
 ```python
-from taxonorm import restore_unique_ip_chunks
+from taxonorm import restore_unique_ip_chunks, split_to_unique_ip_chunks
 
 branches = restore_unique_ip_chunks(chunks)
+chunks = split_to_unique_ip_chunks(taxonomy, max_chunk_len=2)
 ```
 
 При неоднозначном родителе, цикле или конфликтующих листьях для одного ID
@@ -193,7 +194,9 @@ branches = restore_unique_ip_chunks(chunks)
 обычный IP-импорт остаётся без изменений. Для IP-обрезков без собственных
 ключей последние ячейки строки сопоставляются с `leaf_keys` по обычному правилу
 `IP_NK`: их число должно совпадать с числом ключей. Для TP-строк с одним
-значением листа передавайте один ключ.
+значением листа передавайте один ключ. При экспорте и сериализации IP-стилей
+можно передать `max_chunk_len=2` или больше: тогда таксономия с уникальными ID
+будет сохранена как IP-обрезки указанной максимальной длины.
 
 ### Валидация входных данных
 
@@ -378,7 +381,25 @@ names = taxonomy.leaf_path(
 # ("Каталог", "Телефоны", "Аксессуары")
 ```
 
-Если требуемого ключа нет хотя бы у одного узла пути, возникает `KeyError`.
+Если требуемого ключа нет у одного из узлов пути, значение задаётся параметром
+`missed_leaf`. По умолчанию используется `"auto"`:
+
+```python
+names = taxonomy.leaf_path(("catalog", "phones"), "name")
+# ("Каталог", "<name:catalog.phones>")
+```
+
+Можно передать `missed_leaf=None`, чтобы получать `None`, или функцию
+`callable(leaf_key, id_path)`, которая вернёт значение для пропущенного листа.
+
+Для массового просмотра таксономии как путей листьев удобен итератор
+`iter_leaf_paths(key)`. Он возвращает пары `(id_path, leaf_path)` и накапливает
+leaf-путь во время обхода:
+
+```python
+for id_path, leaf_path in taxonomy.iter_leaf_paths("name"):
+    print(id_path, leaf_path)
+```
 
 ### Обход дерева и выборки
 
@@ -650,7 +671,8 @@ from taxonorm.errors import (
 | `iter_branches(order="preorder")` | Обойти дерево в выбранном порядке | `ValueError` |
 | `find_branches(predicate, order="preorder")` | Лениво выбрать ветви по предикату | `ValueError` |
 | `leaf_keys()` | Получить ключи в порядке первого появления | — |
-| `leaf_path(path, key)` | Получить значения листа от корня до узла | `KeyError` |
+| `leaf_path(path, key, missed_leaf="auto")` | Получить значения листа от корня до узла | `KeyError`, `TxValidationError` |
+| `iter_leaf_paths(key, order="preorder", missed_leaf="auto")` | Обойти пары `(id_path, leaf_path)` | `ValueError`, `TxValidationError` |
 
 Связанные функции верхнеуровневого API: `renumber_taxonomy_ids(taxonomy)`,
 `restore_unique_ip_chunks(chunks)`.

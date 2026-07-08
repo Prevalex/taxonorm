@@ -11,7 +11,7 @@ from .reader import import_taxonomy
 from .serializer import serialize_taxonomy
 from .model import Taxonomy, TaxonomyBranch, TaxonomyNode
 from .common import IpStyle, LpStyle
-from .chunks import restore_unique_ip_chunks
+from .chunks import restore_unique_ip_chunks, split_to_unique_ip_chunks
 from .errors import TxInputValidationError
 from .stylers.style_lp_ni import renumber_taxonomy_ids
 from .input_validation import (
@@ -32,6 +32,7 @@ __all__ = [
     "TxInputValidationError",
     "renumber_taxonomy_ids",
     "restore_unique_ip_chunks",
+    "split_to_unique_ip_chunks",
     "validate_input",
     "validate_taxonomy",
     "parse_taxonomy",

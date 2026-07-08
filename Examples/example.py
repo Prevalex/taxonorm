@@ -2,7 +2,7 @@
 
 from colorama import Fore, just_fix_windows_console
 
-from taxonorm.pathfinder import variants_dir, chunks_dir
+from taxonorm.pathfinder import briefs_dir, chunks_dir
 from taxonorm import import_taxonomy, IpStyle
 from taxonorm.utils import get_style_from_hints
 
@@ -22,7 +22,7 @@ LEAF_KEYS = ['en_US','uk_UA','ru_RU']
 VARIANT_FILE = 'IP_H_K_T.csv'
 CHUNKS_FILE = 'mti_grp_swap.csv'
 
-variant_file = variants_dir / VARIANT_FILE
+variant_file = briefs_dir / VARIANT_FILE
 variant_style = get_style_from_hints(variant_file.stem)
 
 chunks_file = chunks_dir / CHUNKS_FILE
@@ -45,8 +45,17 @@ def show(tx):
     for branch in tx.iter_branches():
         print(branch.path, branch.leaves)
 
+def view_as_leaves(taxonomy):
+    for branch in taxonomy.iter_branches():
+        leaves = taxonomy.leaf_path(branch.path,'en_US')
+        print(leaves)
+
+
 taxonomy = import_taxonomy(variant_file, leaf_keys=LEAF_KEYS, styler=variant_style, cvt_dict=cvt_dic)
 show(taxonomy)
+view_as_leaves(taxonomy)
+
+exit()
 
 taxonomy = import_taxonomy(chunks_file, leaf_keys=chunks_leaf_keys, styler=chunks_style, cvt_dict=cvt_dic,
                            restore_ip_chunks=True)

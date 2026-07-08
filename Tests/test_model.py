@@ -94,6 +94,89 @@ def test_leaf_path_follows_the_requested_id_path() -> None:
     assert taxonomy.leaf_path(("root", "child"), "name") == ("Root", "Child")
 
 
+def test_leaf_path_fills_missing_leaf_like_serializer() -> None:
+    taxonomy = Taxonomy.from_branches(
+        [
+            ["root", {"name": "Root"}],
+            ["root", "child", {"title": "Child"}],
+        ]
+    )
+
+    assert taxonomy.leaf_path(("root", "child"), "name") == (
+        "Root",
+        "<name:root.child>",
+    )
+    assert taxonomy.leaf_path(("root", "child"), "name", missed_leaf=None) == (
+        "Root",
+        None,
+    )
+    assert taxonomy.leaf_path(
+        ("root", "child"),
+        "name",
+        missed_leaf=lambda leaf_key, id_path: f"{leaf_key}@{id_path[-1]}",
+    ) == ("Root", "name@child")
+
+
+def test_leaf_path_rejects_invalid_missed_leaf() -> None:
+    taxonomy = Taxonomy.from_branches([["root", {"name": "Root"}]])
+
+    with pytest.raises(TxValidationError, match="missed_leaf"):
+        taxonomy.leaf_path(("root",), "name", missed_leaf="bad")
+
+
+def test_iter_leaf_paths_yields_id_path_and_leaf_path_pairs() -> None:
+    taxonomy = Taxonomy.from_branches(
+        [
+            ["root", {"name": "Root"}],
+            ["root", "left", {"name": "Left"}],
+            ["root", "left", "item", {"name": "Item"}],
+            ["root", "right", {"title": "Right"}],
+        ]
+    )
+
+    assert list(taxonomy.iter_leaf_paths("name")) == [
+        (("root",), ("Root",)),
+        (("root", "left"), ("Root", "Left")),
+        (("root", "left", "item"), ("Root", "Left", "Item")),
+        (("root", "right"), ("Root", "<name:root.right>")),
+    ]
+    assert list(taxonomy.iter_leaf_paths("name", missed_leaf=None))[-1] == (
+        ("root", "right"),
+        ("Root", None),
+    )
+
+
+def test_iter_leaf_paths_honours_traversal_order() -> None:
+    taxonomy = Taxonomy.from_branches(
+        [
+            ["root", {"name": "Root"}],
+            ["root", "left", {"name": "Left"}],
+            ["root", "left", "item", {"name": "Item"}],
+            ["root", "right", {"name": "Right"}],
+        ]
+    )
+
+    assert [path for path, _ in taxonomy.iter_leaf_paths("name", order="breadth")] == [
+        ("root",),
+        ("root", "left"),
+        ("root", "right"),
+        ("root", "left", "item"),
+    ]
+    assert [path for path, _ in taxonomy.iter_leaf_paths("name", order="postorder")] == [
+        ("root", "left", "item"),
+        ("root", "left"),
+        ("root", "right"),
+        ("root",),
+    ]
+
+
+def test_iter_leaf_paths_rejects_unknown_order() -> None:
+    taxonomy = Taxonomy.from_branches([["root", {"name": "Root"}]])
+
+    with pytest.raises(ValueError, match="порядок"):
+        list(taxonomy.iter_leaf_paths("name", order="wrong"))  # type: ignore[arg-type]
+
+
 def test_leaves_are_updated_only_through_validated_taxonomy_api() -> None:
     taxonomy = Taxonomy.from_branches([["root", {"name": "Root"}]])
 

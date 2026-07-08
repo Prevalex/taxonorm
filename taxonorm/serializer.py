@@ -8,6 +8,7 @@ from alib.sequences import resized_list
 from alib.tables import sorted_llist
 
 from taxonorm.common import tMapper, tStyler, DEFAULT_LEAF_KEY, IpStyle, LpStyle
+from taxonorm.chunks import split_to_unique_ip_chunks
 from taxonorm.validation import validated_leaf_keys, validated_list_like, validated_header_titles
 from taxonorm.errors import TxConversionError
 from taxonorm.model import Taxonomy
@@ -104,6 +105,25 @@ def create_mapper(taxonomy: Taxonomy,
     Mapper object
     """
 
+    if not isinstance(taxonomy, Taxonomy):
+        raise TxConversionError(
+            f"Ожидался объект Taxonomy, получено: {type(taxonomy).__name__}"
+        )
+    if not taxonomy:
+        raise TxConversionError("Таксономия пуста")
+
+    return _create_mapper_from_branches(
+        taxonomy.to_branches(),
+        key_order=key_order,
+        sort_cvt=sort_cvt,
+        missed_leaf=missed_leaf,
+    )
+
+
+def _create_mapper_from_branches(branches: list[list[Any]],
+                                 key_order: list[Hashable] | None = None,
+                                 sort_cvt: Callable | str | None = 'auto',
+                                 missed_leaf: Callable | None | str = 'auto') -> tMapper:
     def _missing_leaf_fun(leaf_key, id_path):
         return '<' + str(leaf_key) + ':' + '.'.join(list(map(str, id_path))) + '>'
 
@@ -129,18 +149,14 @@ def create_mapper(taxonomy: Taxonomy,
         except ValueError as err:
             raise TxConversionError(f"{str(err)}") from err
 
-    if not isinstance(taxonomy, Taxonomy):
-        raise TxConversionError(
-            f"Ожидался объект Taxonomy, получено: {type(taxonomy).__name__}"
-        )
-    if not taxonomy:
+    if not branches:
         raise TxConversionError("Таксономия пуста")
 
     # Теперь отсортируем таксономию и дополним ее узлами, которые явно не указаны, но присутствуют в путях.
     # Сортировка может ускорить дальнейшую обработку и улучшить читаемость таксономии на выходе, но критически
     # необходима только для создания lp sparse форматов.
     branches = sorted_llist(
-        taxonomy.to_branches(), stop=-1, sort_cvt=sort_cvt, headtail=0
+        branches, stop=-1, sort_cvt=sort_cvt, headtail=0
     )
 
     # Теперь создадим список ключей, которые присутствуют в таксономии. Те из них, что перечислены в keys_order -
@@ -403,16 +419,33 @@ def serialize_taxonomy(taxonomy: Taxonomy, *, styler: tStyler,
                        headers: list | None = None,
                        key_order: list[Hashable] | None = None,
                        sort_cvt: Callable | str | None = 'auto',
-                       missed_leaf: Callable | None | str = 'auto') -> list[list[Any]]:
-    mapper = create_mapper(
-        taxonomy,
-        key_order=key_order,
-        sort_cvt=sort_cvt,
-        missed_leaf=missed_leaf,
-    )
+                       missed_leaf: Callable | None | str = 'auto',
+                       max_chunk_len: int | None = None) -> list[list[Any]]:
     if isinstance(styler, IpStyle):
+        if max_chunk_len is None:
+            mapper = create_mapper(
+                taxonomy,
+                key_order=key_order,
+                sort_cvt=sort_cvt,
+                missed_leaf=missed_leaf,
+            )
+        else:
+            mapper = _create_mapper_from_branches(
+                split_to_unique_ip_chunks(taxonomy, max_chunk_len=max_chunk_len),
+                key_order=key_order,
+                sort_cvt=sort_cvt,
+                missed_leaf=missed_leaf,
+            )
         return serialize_ip_taxonomy(mapper=mapper, styler=styler, titles=headers)
     elif isinstance(styler, LpStyle):
+        if max_chunk_len is not None:
+            raise TxConversionError("max_chunk_len поддерживается только для IP-стилей")
+        mapper = create_mapper(
+            taxonomy,
+            key_order=key_order,
+            sort_cvt=sort_cvt,
+            missed_leaf=missed_leaf,
+        )
         return serialize_lp_taxonomy(mapper=mapper, styler=styler, leaf_key=leaf_key, titles=headers)
     else:
         raise TxConversionError(f'Ожидался объект класса {IpStyle.__name__} '

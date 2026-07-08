@@ -17,6 +17,7 @@ Leaves = dict[LeafKey, Any]
 BranchRow = list[Any]
 BranchTable = list[BranchRow]
 TraversalOrder = Literal["preorder", "postorder", "breadth"]
+MissedLeaf = Callable[[LeafKey, IdPath], Any] | None | str
 
 
 def _is_non_empty_hashable(value: object) -> bool:
@@ -57,6 +58,28 @@ def _validated_leaves(leaves: Mapping[LeafKey, Any]) -> Leaves:
                 f"Ключ листа должен быть непустым хэшируемым объектом: {key!r}"
             )
     return result
+
+
+def _validated_missed_leaf(
+    missed_leaf: MissedLeaf,
+) -> Callable[[LeafKey, IdPath], Any] | None:
+    if missed_leaf is None:
+        return None
+    if isinstance(missed_leaf, str):
+        if missed_leaf != "auto":
+            raise TxValidationError(
+                'missed_leaf должен быть функцией, None или строкой "auto"'
+            )
+
+        def missing_leaf_value(leaf_key: LeafKey, id_path: IdPath) -> Any:
+            return "<" + str(leaf_key) + ":" + ".".join(map(str, id_path)) + ">"
+
+        return missing_leaf_value
+    if callable(missed_leaf):
+        return missed_leaf
+    raise TxValidationError(
+        'missed_leaf должен быть функцией, None или строкой "auto"'
+    )
 
 
 @dataclass(frozen=True, slots=True)
@@ -365,13 +388,99 @@ class Taxonomy:
         """Return leaf keys in stable first-occurrence order."""
         return tuple(dict.fromkeys(key for branch in self.iter_branches() for key in branch.leaves))
 
-    def leaf_path(self, path: Iterable[NodeId], key: LeafKey) -> tuple[Any, ...]:
+    def leaf_path(
+        self,
+        path: Iterable[NodeId],
+        key: LeafKey,
+        *,
+        missed_leaf: MissedLeaf = "auto",
+    ) -> tuple[Any, ...]:
         """Return leaf values for *key* from the root through *path*."""
+        missing_leaf_value = _validated_missed_leaf(missed_leaf)
         id_path = _validated_path(path)
         children = self._roots
         values: list[Any] = []
-        for node_id in id_path:
+        for index, node_id in enumerate(id_path):
             node = children[node_id]
-            values.append(node.leaves[key])
+            current_path = id_path[: index + 1]
+            if key in node.leaves:
+                values.append(node.leaves[key])
+            elif missing_leaf_value is None:
+                values.append(None)
+            else:
+                values.append(missing_leaf_value(key, current_path))
             children = node._children if node._children is not None else {}
         return tuple(values)
+
+    def iter_leaf_paths(
+        self,
+        key: LeafKey,
+        *,
+        order: TraversalOrder = "preorder",
+        missed_leaf: MissedLeaf = "auto",
+    ) -> Iterator[tuple[IdPath, tuple[Any, ...]]]:
+        """Yield ``(id_path, leaf_path)`` pairs for *key*."""
+        if order not in {"preorder", "postorder", "breadth"}:
+            raise ValueError(f"Неизвестный порядок обхода: {order!r}")
+        missing_leaf_value = _validated_missed_leaf(missed_leaf)
+
+        def leaf_value(node: TaxonomyNode, path: IdPath) -> Any:
+            leaves = node._leaves or {}
+            if key in leaves:
+                return leaves[key]
+            if missing_leaf_value is None:
+                return None
+            return missing_leaf_value(key, path)
+
+        if order == "breadth":
+            queue: deque[tuple[IdPath, TaxonomyNode, tuple[Any, ...]]] = deque()
+            for node_id, node in self._roots.items():
+                root_path: IdPath = (node_id,)
+                queue.append((root_path, node, (leaf_value(node, root_path),)))
+            while queue:
+                path, node, values = queue.popleft()
+                yield path, values
+                if node._children is not None:
+                    for child_id, child in node._children.items():
+                        child_path = path + (child_id,)
+                        queue.append(
+                            (child_path, child, values + (leaf_value(child, child_path),))
+                        )
+            return
+
+        if order == "postorder":
+            post_stack: list[tuple[IdPath, TaxonomyNode, tuple[Any, ...], bool]] = []
+            for node_id, node in reversed(self._roots.items()):
+                post_root_path: IdPath = (node_id,)
+                post_stack.append(
+                    (post_root_path, node, (leaf_value(node, post_root_path),), False)
+                )
+            while post_stack:
+                path, node, values, visited = post_stack.pop()
+                if visited:
+                    yield path, values
+                    continue
+                post_stack.append((path, node, values, True))
+                if node._children is not None:
+                    for child_id, child in reversed(node._children.items()):
+                        child_path = path + (child_id,)
+                        post_stack.append(
+                            (child_path, child, values + (leaf_value(child, child_path),), False)
+                        )
+            return
+
+        stack: list[tuple[IdPath, TaxonomyNode, tuple[Any, ...]]] = []
+        for node_id, node in reversed(self._roots.items()):
+            preorder_root_path: IdPath = (node_id,)
+            stack.append(
+                (preorder_root_path, node, (leaf_value(node, preorder_root_path),))
+            )
+        while stack:
+            path, node, values = stack.pop()
+            yield path, values
+            if node._children is not None:
+                for child_id, child in reversed(node._children.items()):
+                    child_path = path + (child_id,)
+                    stack.append(
+                        (child_path, child, values + (leaf_value(child, child_path),))
+                    )

@@ -20,6 +20,7 @@ def export_taxonomy(taxonomy: Taxonomy, filename: str | Path, *,
                     key_order: list[Hashable] | None = None,
                     sort_cvt: Callable | str | None = 'auto',
                     missed_leaf: Callable | None | str = 'auto',
+                    max_chunk_len: int | None = None,
                     sheet: str | None = None,
                     codepage=UTF8_BOM):
     _ok, _msg = True, ''
@@ -35,6 +36,7 @@ def export_taxonomy(taxonomy: Taxonomy, filename: str | Path, *,
         key_order=key_order,
         sort_cvt=sort_cvt,
         missed_leaf=missed_leaf,
+        max_chunk_len=max_chunk_len,
     )
     save_llist_to_file(serial, filename, codepage=codepage, sheet=sheet)
     return

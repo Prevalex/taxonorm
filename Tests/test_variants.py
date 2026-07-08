@@ -145,6 +145,7 @@ def test_writer_serializes_taxonomy_before_saving(monkeypatch: pytest.MonkeyPatc
         destination,
         styler=style,
         key_order=LEAF_KEYS,
+        max_chunk_len=2,
     )
 
     assert saved["filename"] == destination
@@ -152,6 +153,7 @@ def test_writer_serializes_taxonomy_before_saving(monkeypatch: pytest.MonkeyPatc
         IP_PATTERN,
         styler=style,
         key_order=LEAF_KEYS,
+        max_chunk_len=2,
     )
 
 
