@@ -10,6 +10,13 @@ from .writer import export_taxonomy
 from .reader import import_taxonomy
 from .serializer import serialize_taxonomy
 from .model import Taxonomy, TaxonomyBranch, TaxonomyNode
+from .viewer import (
+    render_text_tree,
+    save_text_tree,
+    view_live_html_tree,
+    view_live_text_tree,
+    view_text_tree,
+)
 from .common import IpStyle, LpStyle
 from .chunks import restore_unique_ip_chunks, split_to_unique_ip_chunks
 from .errors import TxInputValidationError
@@ -40,4 +47,9 @@ __all__ = [
     "export_taxonomy",
     "import_taxonomy",
     "serialize_taxonomy",
+    "render_text_tree",
+    "save_text_tree",
+    "view_text_tree",
+    "view_live_text_tree",
+    "view_live_html_tree",
 ]

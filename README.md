@@ -9,6 +9,27 @@ API возвращает и принимает объект `Taxonomy`. Табл
 
 ## Публичный API
 
+### Рабочие примеры
+
+В примерах ниже используется одна и та же небольшая таксономия из
+`Samples/Variants/Shorts`: бытовая техника, электроника и серверные решения.
+В этой папке лежит одна структура, сохранённая в разных стилях и форматах.
+
+Небольшие запускаемые примеры находятся в `Examples/`:
+
+- [sample_import.py](Examples/sample_import.py) — импорт CSV в стиле
+  `IpStyle(header=True, keys=True, tabbed=True)` и базовый просмотр модели;
+- [sample_parse_rows.py](Examples/sample_parse_rows.py) — парсинг таблицы,
+  уже прочитанной в память;
+- [sample_model_ops.py](Examples/sample_model_ops.py) — поиск, `leaf_path()`,
+  изменение листьев, переименование и перенос поддерева;
+- [sample_export.py](Examples/sample_export.py) — экспорт той же таксономии в
+  другой стиль;
+- [sample_validate.py](Examples/sample_validate.py) — пользовательский отчёт
+  валидации;
+- [view_taxonomy.py](Examples/view_taxonomy.py) — утилита просмотра дерева в
+  режимах `text`, `interactive` и `pyvis`.
+
 ### Основная модель
 
 `Taxonomy` — каноническое представление таксономии в памяти. Объект может
@@ -23,17 +44,17 @@ API возвращает и принимает объект `Taxonomy`. Табл
 from taxonorm import Taxonomy
 
 taxonomy = Taxonomy.from_branches([
-    ["catalog", {"name": "Каталог"}],
-    ["catalog", "phones", {"name": "Телефоны"}],
-    ["catalog", "phones", "accessories", {"name": "Аксессуары"}],
-    ["catalog", "tablets", {"name": "Планшеты"}],
-    ["catalog", "tablets", "accessories", {"name": "Аксессуары"}],
+    [1, {"en_US": "Household appliances", "uk_UA": "Побутова техніка"}],
+    [1, 11, {"en_US": "Climate technology", "uk_UA": "Кліматична техніка"}],
+    [1, 11, 21, {"en_US": "Household fans", "uk_UA": "Вентилятори побутові"}],
+    [2, {"en_US": "Electronics", "uk_UA": "Електроніка"}],
+    [2, 14, {"en_US": "Audio and multimedia", "uk_UA": "Аудіо та мультимедіа"}],
 ])
 ```
 
-В примере ID `"accessories"` встречается дважды, но пути
-`("catalog", "phones", "accessories")` и
-`("catalog", "tablets", "accessories")` обозначают разные узлы.
+В варианте `Samples/Variants/Shorts/SHORT_2L_NU.json` та же таксономия
+сохранена с неуникальными ID. Например, ID `1` может встречаться под разными
+корнями, но пути `(101, 1)` и `(102, 1)` обозначают разные узлы.
 
 Основные инварианты:
 
@@ -55,8 +76,8 @@ taxonomy = Taxonomy.from_branches([
 
 ```python
 taxonomy = Taxonomy.from_branches([
-    [1, {"en": "Electronics", "uk": "Електроніка"}],
-    [1, 2, {"en": "Audio", "uk": "Аудіо"}],
+    [1, {"en_US": "Household appliances", "uk_UA": "Побутова техніка"}],
+    [1, 11, {"en_US": "Climate technology", "uk_UA": "Кліматична техніка"}],
 ])
 ```
 
@@ -65,10 +86,10 @@ taxonomy = Taxonomy.from_branches([
 
 ```python
 taxonomy = Taxonomy.from_branches([
-    ["root", "child", {"name": "Child"}],
+    [1, 12, 22, 31, {"en_US": "Freezers"}],
 ])
 
-assert taxonomy.get_node(("root",)).leaves == {}
+assert taxonomy.get_node((1,)).leaves == {}
 ```
 
 `to_branches()` выполняет обратное преобразование и возвращает все узлы в
@@ -76,7 +97,7 @@ assert taxonomy.get_node(("root",)).leaves == {}
 
 ```python
 rows = taxonomy.to_branches()
-# [["root", {}], ["root", "child", {"name": "Child"}]]
+# [[1, {}], [1, 12, {}], [1, 12, 22, {}], [1, 12, 22, 31, {"en_US": "Freezers"}]]
 ```
 
 Списки ветвей и словари листьев копируются. Сами значения листьев копируются
@@ -87,19 +108,22 @@ rows = taxonomy.to_branches()
 `import_taxonomy()` читает CSV, XLS или XLSX и всегда возвращает `Taxonomy`:
 
 ```python
-from taxonorm import LpStyle, import_taxonomy
+from taxonorm import IpStyle, import_taxonomy
 
 taxonomy = import_taxonomy(
-    "categories.csv",
-    styler=LpStyle(header=False, ids=True, sparse=False),
-    leaf_keys=["name"],
+    "Samples/Variants/Shorts/U_IP_H_K_T.csv",
+    styler=IpStyle(header=True, keys=True, tabbed=True),
+    leaf_keys=["en_US", "uk_UA"],
 )
 ```
 
 Если `styler` не указан, библиотека попытается определить стиль автоматически:
 
 ```python
-taxonomy = import_taxonomy("categories.xlsx", leaf_keys=["name"])
+taxonomy = import_taxonomy(
+    "Samples/Variants/Shorts/U_IP_H_K_T.xlsx",
+    leaf_keys=["en_US", "uk_UA"],
+)
 ```
 
 Автоопределение является эвристикой. Для неоднозначных или внешних данных
@@ -132,11 +156,14 @@ def as_int_when_possible(value):
         return value
 
 taxonomy = import_taxonomy(
-    "categories.csv",
-    leaf_keys=["name"],
+    "Samples/Variants/Shorts/U_IP_H_K_T.csv",
+    leaf_keys=["en_US", "uk_UA"],
     cvt_dict={"*": as_int_when_possible},
 )
 ```
+
+Полный запускаемый вариант этого сценария находится в
+[Examples/sample_import.py](Examples/sample_import.py).
 
 ### Низкоуровневый парсинг и определение стиля
 
@@ -147,15 +174,19 @@ taxonomy = import_taxonomy(
 from taxonorm import LpStyle, parse_taxonomy
 
 rows = [
-    [1, "Catalog"],
-    [2, "Catalog", "Phones"],
+    [1, "Household appliances"],
+    [11, "Household appliances", "Climate technology"],
+    [21, "Household appliances", "Climate technology", "Household fans"],
 ]
 taxonomy = parse_taxonomy(
     rows,
     styler=LpStyle(header=False, ids=True, sparse=False),
-    leaf_keys=["name"],
+    leaf_keys=["en_US"],
 )
 ```
+
+Полный запускаемый вариант находится в
+[Examples/sample_parse_rows.py](Examples/sample_parse_rows.py).
 
 `guess_style(rows, leaf_keys=[...])` возвращает предполагаемый `IpStyle` или
 `LpStyle`, но не выполняет парсинг. Результат сниффера следует считать
@@ -172,9 +203,9 @@ TP-таблица вида `parent_id, node_id, leaf`, но обрезок мо�
 from taxonorm import IpStyle, import_taxonomy
 
 taxonomy = import_taxonomy(
-    "vendor-groups.csv",
+    "Samples/Variants/Chunks/mti_grp_swap.csv",
     styler=IpStyle(header=False, keys=False, tabbed=False),
-    leaf_keys=["name"],
+    leaf_keys=["en_US"],
     restore_ip_chunks=True,
 )
 ```
@@ -205,18 +236,21 @@ chunks = split_to_unique_ip_chunks(taxonomy, max_chunk_len=2)
 содержащий все обнаруженные проблемы (до заданного ограничения):
 
 ```python
-from taxonorm import LpStyle, validate_input
+from taxonorm import IpStyle, validate_input
 
-style = LpStyle(header=False, ids=True, sparse=False)
+style = IpStyle(header=True, keys=True, tabbed=True)
 report = validate_input(
     rows,
     styler=style,
-    leaf_keys=["name"],
+    leaf_keys=["en_US", "uk_UA"],
 )
 
 if not report.valid:
     print(report.format_text())
 ```
+
+См. [Examples/sample_validate.py](Examples/sample_validate.py): там строка,
+похожая на sample-файл, намеренно повреждена, чтобы показать формат отчёта.
 
 Отчёт различает ошибки и предупреждения:
 
@@ -247,9 +281,8 @@ report.to_dict()   # структура для JSON, API или журнала
 `format_text()` создаёт предназначенное для человека сообщение:
 
 ```text
-LP_NH_I_S; источник: categories.csv: обнаружено ошибок: 2; предупреждений: 0.
-[id.invalid] строка 18, столбец 1: ID должен быть непустым хэшируемым объектом.
-[lp.sparse.unresolved] строка 27, столбец 3: Значение sparse-пути невозможно восстановить из предыдущих строк.
+IP_H_K_T; источник: damaged-short-sample.csv: обнаружено ошибок: 1; предупреждений: 0.
+[id.missing] строка 2: В строке отсутствует ID-путь Ожидалось: хотя бы один непустой ID.
 ```
 
 Число диагностик ограничивается аргументом `max_issues`:
@@ -258,9 +291,9 @@ LP_NH_I_S; источник: categories.csv: обнаружено ошибок: 
 report = validate_input(
     rows,
     styler=style,
-    leaf_keys=["name"],
+    leaf_keys=["en_US", "uk_UA"],
     max_issues=25,
-    source="categories.csv",
+    source="short-sample.csv",
 )
 ```
 
@@ -290,9 +323,9 @@ from taxonorm import TxInputValidationError, import_taxonomy
 
 try:
     taxonomy = import_taxonomy(
-        "categories.csv",
+        "Samples/Variants/Shorts/U_IP_H_K_T.csv",
         styler=style,
-        leaf_keys=["name"],
+        leaf_keys=["en_US", "uk_UA"],
     )
 except TxInputValidationError as error:
     print(error)                 # удобный текст для пользователя
@@ -312,7 +345,7 @@ except TxInputValidationError as error:
 taxonomy = parse_taxonomy(
     rows,
     styler=style,
-    leaf_keys=["name"],
+    leaf_keys=["en_US", "uk_UA"],
     validate=False,
 )
 ```
@@ -341,22 +374,22 @@ report.raise_for_errors()
 
 ```python
 len(taxonomy)                         # число узлов
-("catalog", "phones") in taxonomy  # проверка полного пути
+(2, 14, 24, 34) in taxonomy           # проверка полного пути
 
-node = taxonomy.get_node(("catalog", "phones"))
-print(node.leaves["name"])
+node = taxonomy.get_node((2, 14, 24, 34))
+print(node.leaves["en_US"])           # Microphones
 print(node.children)
 ```
 
 `get_node()` принимает полный ID-путь. Если путь отсутствует, возникает
 `KeyError`. Передавать одиночную строку вместо пути нельзя: используйте
-`("root",)`, а не `"root"`.
+`(1,)`, а не `1`.
 
 `TaxonomyNode.leaves`, `TaxonomyNode.children` и `Taxonomy.roots` — доступные
 только для чтения отображения. Это не позволяет обойти проверку ID и ключей:
 
 ```python
-node.leaves["name"] = "Новое имя"  # TypeError
+node.leaves["en_US"] = "New name"  # TypeError
 ```
 
 Изменять модель следует методами `Taxonomy`, описанными ниже.
@@ -365,28 +398,60 @@ node.leaves["name"] = "Новое имя"  # TypeError
 входящем ребре и не дублируется в памяти. Получить ID и расположение узла можно
 из полного `TaxonomyBranch.path` либо из пути, переданного в `get_node()`.
 
+### Визуализация дерева
+
+Модуль `taxonorm.viewer` содержит три способа просмотра дерева. Эти функции
+работают напрямую с `Taxonomy`, без преобразования в `networkx` или другой
+промежуточный граф:
+
+```python
+from taxonorm import (
+    view_live_html_tree,
+    view_live_text_tree,
+    view_text_tree,
+)
+
+view_text_tree(taxonomy)                  # статическое дерево в терминале
+view_text_tree(taxonomy, leaf_key="en_US") # показывать названия вместо ID
+
+view_live_text_tree(taxonomy, leaf_key="en_US")  # интерактивный TUI
+
+html_path = view_live_html_tree(
+    taxonomy,
+    leaf_key="en_US",
+    filename="taxonomy.html",
+)
+```
+
+По умолчанию подписи узлов — это ID. Если передать `leaf_key`, подписью станет
+значение выбранного листа на соответствующем узле. При этом структура остаётся
+родной структурой `Taxonomy`, поэтому одноимённые узлы не схлопываются.
+
+Дополнительно доступны `render_text_tree()` для получения объекта Rich без
+печати и `save_text_tree()` для сохранения текстового дерева в файл.
+
 `leaf_keys()` возвращает ключи листьев в порядке первого появления:
 
 ```python
-assert taxonomy.leaf_keys() == ("name",)
+assert taxonomy.leaf_keys() == ("en_US", "uk_UA")
 ```
 
 `leaf_path()` возвращает значения выбранного листа от корня до узла:
 
 ```python
 names = taxonomy.leaf_path(
-    ("catalog", "phones", "accessories"),
-    "name",
+    (1, 12, 22, 31),
+    "en_US",
 )
-# ("Каталог", "Телефоны", "Аксессуары")
+# ("Household appliances", "Large household appliances", "Refrigeration equipment", "Freezers")
 ```
 
 Если требуемого ключа нет у одного из узлов пути, значение задаётся параметром
 `missed_leaf`. По умолчанию используется `"auto"`:
 
 ```python
-names = taxonomy.leaf_path(("catalog", "phones"), "name")
-# ("Каталог", "<name:catalog.phones>")
+names = taxonomy.leaf_path((1, 12), "de_DE")
+# ("<de_DE:1>", "<de_DE:1.12>")
 ```
 
 Можно передать `missed_leaf=None`, чтобы получать `None`, или функцию
@@ -397,7 +462,7 @@ names = taxonomy.leaf_path(("catalog", "phones"), "name")
 leaf-путь во время обхода:
 
 ```python
-for id_path, leaf_path in taxonomy.iter_leaf_paths("name"):
+for id_path, leaf_path in taxonomy.iter_leaf_paths("en_US"):
     print(id_path, leaf_path)
 ```
 
@@ -425,7 +490,7 @@ taxonomy.iter_branches("breadth")    # по уровням, начиная с к
 
 ```python
 groups = taxonomy.find_branches(
-    lambda branch: branch.leaves.get("kind") == "group",
+    lambda branch: branch.leaves.get("en_US", "").endswith("systems"),
     order="breadth",
 )
 
@@ -441,8 +506,8 @@ for branch in groups:
 
 ```python
 taxonomy.add_branch(
-    ("catalog", "wearables"),
-    {"name": "Носимая электроника"},
+    (2, 14, 24, 39),
+    {"en_US": "Studio monitors", "uk_UA": "Студійні монітори"},
 )
 ```
 
@@ -451,8 +516,8 @@ taxonomy.add_branch(
 
 ```python
 taxonomy.add_branch(
-    ("catalog", "wearables"),
-    {"name": "Wearables"},
+    (2, 14, 24, 39),
+    {"en_US": "Studio monitors", "uk_UA": "Студійні монітори"},
     replace=True,
 )
 ```
@@ -465,8 +530,8 @@ taxonomy.add_branch(
 
 ```python
 taxonomy.update_leaves(
-    ("catalog", "phones"),
-    {"description": "Mobile and landline phones"},
+    (3, 15, 25),
+    {"note": "Duplicated label, distinct path"},
 )
 ```
 
@@ -475,8 +540,8 @@ taxonomy.update_leaves(
 
 ```python
 taxonomy.update_leaves(
-    ("catalog", "phones"),
-    {"name": "Phones"},
+    (3, 15, 25),
+    {"en_US": "Servers", "uk_UA": "Сервери"},
     replace=True,
 )
 ```
@@ -491,8 +556,8 @@ taxonomy.update_leaves(
 
 ```python
 taxonomy.rename_node(
-    ("catalog", "phones"),
-    "telephones",
+    (3, 15, 25, 35),
+    350,
 )
 ```
 
@@ -506,8 +571,8 @@ taxonomy.rename_node(
 
 ```python
 taxonomy.move_subtree(
-    ("catalog", "telephones", "accessories"),
-    ("catalog", "wearables"),
+    (3, 15, 26, 37),
+    (3, 15, 25),
 )
 ```
 
@@ -515,9 +580,9 @@ taxonomy.move_subtree(
 
 ```python
 taxonomy.move_subtree(
-    ("catalog", "telephones", "accessories"),
-    ("catalog", "wearables"),
-    new_id="phone-accessories",
+    (3, 15, 26, 37),
+    (3, 15, 25),
+    new_id=370,
 )
 ```
 
@@ -555,12 +620,15 @@ renumbered = renumber_taxonomy_ids(
 диапазонами, как при импорте LP-таксономии без собственных ID. Исходная модель
 не изменяется.
 
+Пример нескольких операций модели на sample-таксономии см.
+[Examples/sample_model_ops.py](Examples/sample_model_ops.py).
+
 ### Удаление узлов
 
 По умолчанию `remove_branch()` удаляет только узел без потомков:
 
 ```python
-taxonomy.remove_branch(("catalog", "obsolete"))
+taxonomy.remove_branch((2, 14, 24, 34))
 ```
 
 Попытка удалить узел с дочерними узлами вызывает `TxValidationError`. Это
@@ -569,7 +637,7 @@ taxonomy.remove_branch(("catalog", "obsolete"))
 
 ```python
 taxonomy.remove_branch(
-    ("catalog", "old-section"),
+    (2, 14, 24),
     recursive=True,
 )
 ```
@@ -590,7 +658,7 @@ rows = serialize_taxonomy(
     taxonomy,
     styler=IpStyle(header=True, keys=True, tabbed=True),
     headers=["Taxonomy", "1.0"],
-    key_order=["name", "description"],
+    key_order=["en_US", "uk_UA"],
 )
 ```
 
@@ -602,12 +670,15 @@ from taxonorm import LpStyle, export_taxonomy
 
 export_taxonomy(
     taxonomy,
-    "categories.xlsx",
+    "short-taxonomy.xlsx",
     styler=LpStyle(header=True, ids=True, sparse=False),
-    leaf_key="name",
-    headers=["ID", "Category path"],
+    leaf_key="en_US",
+    headers=["id", "category"],
 )
 ```
+
+Запускаемый пример экспорта без записи в рабочую папку проекта находится в
+[Examples/sample_export.py](Examples/sample_export.py).
 
 Для IP-стиля `key_order` задаёт порядок столбцов листьев. Для LP-стиля
 `leaf_key` выбирает единственный лист, образующий leaf-путь. Аргумент
