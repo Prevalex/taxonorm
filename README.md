@@ -236,7 +236,7 @@ runnable version.
 but does not parse anything. Treat the result as a hint, not a proof of input
 correctness. See [Examples/sample_api_tour.py](Examples/sample_api_tour.py).
 
-### Restoring IP Chunks
+### **Working With IP Chunks**
 
 Some IP tables store partial paths rather than full paths. The smallest case
 is a TP-style table such as `parent_id, node_id, leaf`, but a chunk may contain
