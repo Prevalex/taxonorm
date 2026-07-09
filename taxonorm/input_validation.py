@@ -6,7 +6,7 @@ from collections.abc import Hashable, Mapping, Sequence
 from dataclasses import dataclass, field, fields
 from typing import Any, Literal
 
-from alib.validation import is_empty
+from ._validation import is_empty
 
 from .common import IpStyle, LpStyle, tStyler
 from .errors import TxInputValidationError
@@ -47,15 +47,15 @@ class ValidationIssue:
     def format_text(self) -> str:
         location: list[str] = []
         if self.row is not None:
-            location.append(f"строка {self.row}")
+            location.append(f"row {self.row}")
         if self.column is not None:
-            location.append(f"столбец {self.column}")
+            location.append(f"column {self.column}")
         prefix = f"{', '.join(location)}: " if location else ""
         text = f"[{self.code}] {prefix}{self.message}"
         if self.value is not None:
-            text += f" Получено: {_short_repr(self.value)}."
+            text += f" Got: {_short_repr(self.value)}."
         if self.expected:
-            text += f" Ожидалось: {self.expected}."
+            text += f" Expected: {self.expected}."
         return text
 
 
@@ -99,15 +99,14 @@ class ValidationReport:
     def format_text(self, *, limit: int | None = None) -> str:
         errors = len(self.errors)
         warnings = len(self.warnings)
-        source = f"; источник: {self.source}" if self.source else ""
+        source = f"; source: {self.source}" if self.source else ""
         heading = (
-            f"{self.style}{source}: обнаружено ошибок: {errors}; "
-            f"предупреждений: {warnings}."
+            f"{self.style}{source}: errors: {errors}; warnings: {warnings}."
         )
         selected = self.issues if limit is None else self.issues[:limit]
         lines = [heading, *(issue.format_text() for issue in selected)]
         if self.truncated or len(selected) < len(self.issues):
-            lines.append("Часть диагностик не показана.")
+            lines.append("Some diagnostics are not shown.")
         return "\n".join(lines)
 
     def raise_for_errors(self) -> None:
@@ -187,27 +186,27 @@ def _validated_configuration(
     collector: _Collector,
 ) -> list[Hashable]:
     if styler is None:
-        collector.add("style.missing", "Стиль таксономии не задан")
+        collector.add("style.missing", "Taxonomy style is not specified")
     else:
         for descriptor in fields(styler):
             value = getattr(styler, descriptor.name)
             if not isinstance(value, bool):
                 collector.add(
                     "style.incomplete",
-                    f"Свойство стиля {descriptor.name!r} должно быть определено",
+                    f"Style property {descriptor.name!r} must be defined",
                     value=value,
-                    expected="True или False",
+                    expected="True or False",
                 )
 
     if not isinstance(leaf_keys, Sequence) or isinstance(leaf_keys, (str, bytes)):
         collector.add(
             "leaf_keys.type",
-            "leaf_keys должен быть списком или кортежем",
+            "leaf_keys must be a list or tuple",
             value=leaf_keys,
         )
         return []
     if not leaf_keys:
-        collector.add("leaf_keys.empty", "Список ключей листьев пуст")
+        collector.add("leaf_keys.empty", "Leaf key list is empty")
         return []
 
     result: list[Hashable] = []
@@ -215,7 +214,7 @@ def _validated_configuration(
         if not is_valid_keyid(key):
             collector.add(
                 "leaf_keys.invalid",
-                "Ключ листа должен быть непустым хэшируемым объектом",
+                "Leaf key must be a non-empty hashable object",
                 column=index,
                 value=key,
             )
@@ -223,7 +222,7 @@ def _validated_configuration(
         if key in result:
             collector.add(
                 "leaf_keys.duplicate",
-                "Ключ листа указан повторно и будет использован один раз",
+                "Leaf key is repeated and will be used once",
                 column=index,
                 value=key,
                 severity="warning",
@@ -239,12 +238,12 @@ def _normalize_rows(
     if not isinstance(branch_list, Sequence) or isinstance(branch_list, (str, bytes)):
         collector.add(
             "table.type",
-            "Таксономия должна быть последовательностью строк",
+            "Taxonomy must be a sequence of rows",
             value=branch_list,
         )
         return []
     if not branch_list:
-        collector.add("table.empty", "Таблица таксономии пуста")
+        collector.add("table.empty", "Taxonomy table is empty")
         return []
 
     rows: list[tuple[int, list[Any]]] = []
@@ -252,7 +251,7 @@ def _normalize_rows(
         if not isinstance(row, Sequence) or isinstance(row, (str, bytes)):
             collector.add(
                 "row.type",
-                "Строка должна быть последовательностью ячеек",
+                "Row must be a sequence of cells",
                 row=row_number,
                 value=row,
             )
@@ -261,7 +260,7 @@ def _normalize_rows(
         if not converted or all(is_empty(value) for value in converted):
             collector.add(
                 "row.empty",
-                "Пустая строка будет пропущена",
+                "Empty row will be skipped",
                 row=row_number,
                 severity="warning",
             )
@@ -279,7 +278,7 @@ def _data_rows(
     data = rows[1:] if header else rows
     nonempty = [item for item in data if any(not is_empty(value) for value in item[1])]
     if not nonempty:
-        collector.add("table.no_data", "После заголовка нет строк данных")
+        collector.add("table.no_data", "There are no data rows after the header")
     return nonempty
 
 
@@ -289,9 +288,9 @@ def _validate_id_cells(
     if not cells:
         collector.add(
             "id.missing",
-            "В строке отсутствует ID-путь",
+            "The row has no ID path",
             row=row_number,
-            expected="хотя бы один непустой ID",
+            expected="at least one non-empty ID",
         )
         return None
     valid: list[Hashable] = []
@@ -300,7 +299,7 @@ def _validate_id_cells(
         if not is_valid_keyid(value):
             collector.add(
                 "id.invalid",
-                "ID должен быть непустым хэшируемым объектом",
+                "ID must be a non-empty hashable object",
                 row=row_number,
                 column=column,
                 value=value,
@@ -323,7 +322,7 @@ def _record_path(
     if previous is not None:
         collector.add(
             "path.duplicate",
-            f"ID-путь уже объявлен в строке {previous}",
+            f"ID path was already declared in row {previous}",
             row=row_number,
             value=path,
         )
@@ -343,10 +342,10 @@ def _validate_ip_header_keys(
     if first_key is None:
         collector.add(
             "ip.header.keys_missing",
-            "В заголовке не найден ни один переданный ключ листа",
+            "Header does not contain any of the supplied leaf keys",
             row=1,
             value=header,
-            expected=f"один или несколько ключей из {leaf_keys!r}",
+            expected=f"one or more keys from {leaf_keys!r}",
         )
         return
     for key in leaf_keys:
@@ -354,13 +353,14 @@ def _validate_ip_header_keys(
         if not positions:
             collector.add(
                 "ip.header.key_missing",
-                f"Ключ листа {key!r} отсутствует в заголовке",
+                f"Leaf key {key!r} is missing from the header",
                 row=1,
+                value=key,
             )
         elif len(positions) > 1:
             collector.add(
                 "ip.header.key_duplicate",
-                f"Ключ листа {key!r} повторяется в заголовке",
+                f"Leaf key {key!r} is repeated in the header",
                 row=1,
                 column=positions[1] + 1,
             )
@@ -385,10 +385,10 @@ def _validate_ip_keyed_rows(
         if first_key is None:
             collector.add(
                 "ip.row.key_missing",
-                "В строке не найдено начало группы key/value",
+                "The row does not contain the start of a key/value group",
                 row=row_number,
                 value=row,
-                expected=f"ключ из {leaf_keys!r}",
+                expected=f"a key from {leaf_keys!r}",
             )
             continue
 
@@ -396,7 +396,7 @@ def _validate_ip_keyed_rows(
         if not style.tabbed and any(is_empty(value) for value in id_source):
             collector.add(
                 "ip.id.gap",
-                "В нетабулированном ID-пути обнаружена пустая ячейка",
+                "Non-tabbed ID path contains an empty cell",
                 row=row_number,
                 value=id_source,
             )
@@ -412,7 +412,7 @@ def _validate_ip_keyed_rows(
             if not is_valid_keyid(key):
                 collector.add(
                     "ip.row.key_invalid",
-                    "Ключ в группе key/value должен быть непустым и хэшируемым",
+                    "Key in a key/value group must be non-empty and hashable",
                     row=row_number,
                     column=column,
                     value=key,
@@ -421,7 +421,7 @@ def _validate_ip_keyed_rows(
             if key in seen_keys:
                 collector.add(
                     "ip.row.key_duplicate",
-                    "Ключ листа повторяется в строке",
+                    "Leaf key is repeated in the row",
                     row=row_number,
                     column=column,
                     value=key,
@@ -431,7 +431,7 @@ def _validate_ip_keyed_rows(
             if key not in leaf_keys:
                 collector.add(
                     "ip.row.key_unknown",
-                    "Ключ отсутствует в переданном leaf_keys и будет проигнорирован",
+                    "Key is not present in leaf_keys and will be ignored",
                     row=row_number,
                     column=column,
                     value=key,
@@ -451,10 +451,10 @@ def _validate_ip_without_keys(
         if len(row) < leaf_count + 1:
             collector.add(
                 "ip.row.too_short",
-                "Недостаточно ячеек для ID и значений листьев",
+                "Not enough cells for ID and leaf values",
                 row=row_number,
                 value=row,
-                expected=f"не менее {leaf_count + 1} ячеек",
+                expected=f"at least {leaf_count + 1} cells",
             )
             continue
         id_cells = list(row[:-leaf_count])
@@ -502,7 +502,7 @@ def _validate_lp_ids_dense(
         if len(row) < 2:
             collector.add(
                 "lp.row.too_short",
-                "LP-строка с ID должна содержать ID и хотя бы один лист",
+                "LP row with ID must contain an ID and at least one leaf",
                 row=row_number,
                 value=row,
             )
@@ -511,7 +511,7 @@ def _validate_lp_ids_dense(
         if not is_valid_keyid(node_id):
             collector.add(
                 "id.invalid",
-                "ID должен быть непустым хэшируемым объектом",
+                "ID must be a non-empty hashable object",
                 row=row_number,
                 column=1,
                 value=node_id,
@@ -519,7 +519,7 @@ def _validate_lp_ids_dense(
         elif node_id in ids_seen:
             collector.add(
                 "lp.id.duplicate",
-                f"ID уже объявлен в строке {ids_seen[node_id]}",
+                f"ID was already declared in row {ids_seen[node_id]}",
                 row=row_number,
                 column=1,
                 value=node_id,
@@ -532,7 +532,7 @@ def _validate_lp_ids_dense(
             if is_empty(value):
                 collector.add(
                     "lp.leaf.gap",
-                    "В плотном leaf-пути обнаружена пустая ячейка",
+                    "Dense leaf path contains an empty cell",
                     row=row_number,
                     column=index,
                     value=value,
@@ -543,7 +543,7 @@ def _validate_lp_ids_dense(
             if previous_terminal is not None:
                 collector.add(
                     "lp.leaf.duplicate",
-                    f"Конечное значение листа уже объявлено в строке {previous_terminal}",
+                    f"Terminal leaf value was already declared in row {previous_terminal}",
                     row=row_number,
                     column=len(row),
                     value=terminal,
@@ -555,7 +555,7 @@ def _validate_lp_ids_dense(
             if duplicate is not None:
                 collector.add(
                     "lp.leaf.duplicate",
-                    f"Конечное значение листа уже объявлено в строке {unhashable_rows[duplicate]}",
+                    f"Terminal leaf value was already declared in row {unhashable_rows[duplicate]}",
                     row=row_number,
                     column=len(row),
                     value=terminal,
@@ -577,7 +577,7 @@ def _validate_lp_ids_dense(
             if not resolved:
                 collector.add(
                     "lp.leaf.unresolved",
-                    "Для элемента leaf-пути не найдена строка с соответствующим конечным листом",
+                    "No row with a matching terminal leaf was found for this leaf path item",
                     row=row_number,
                     column=offset,
                     value=value,
@@ -593,7 +593,7 @@ def _validate_lp_no_ids_dense(
         if not row:
             collector.add(
                 "lp.row.no_leaves",
-                "LP-строка без ID не содержит leaf-путь",
+                "LP row without ID does not contain a leaf path",
                 row=row_number,
             )
             continue
@@ -603,7 +603,7 @@ def _validate_lp_no_ids_dense(
             if is_empty(value):
                 collector.add(
                     "lp.leaf.gap",
-                    "В плотном leaf-пути обнаружена пустая ячейка",
+                    "Dense leaf path contains an empty cell",
                     row=row_number,
                     column=column,
                 )
@@ -611,7 +611,7 @@ def _validate_lp_no_ids_dense(
             elif not isinstance(value, Hashable):
                 collector.add(
                     "lp.ni.leaf_unhashable",
-                    "LP без ID требует хэшируемые значения leaf-пути",
+                    "LP without IDs requires hashable leaf path values",
                     row=row_number,
                     column=column,
                     value=value,
@@ -626,7 +626,7 @@ def _validate_lp_no_ids_dense(
         if previous is not None:
             collector.add(
                 "lp.path.duplicate",
-                f"Leaf-путь уже объявлен в строке {previous}",
+                f"Leaf path was already declared in row {previous}",
                 row=row_number,
                 value=path_tuple,
             )
@@ -645,13 +645,13 @@ def _expand_sparse_lp(
     for row_number, row in rows:
         if ids:
             if not row:
-                collector.add("lp.row.too_short", "В sparse-строке отсутствует ID", row=row_number)
+                collector.add("lp.row.too_short", "Sparse row is missing an ID", row=row_number)
                 continue
             node_id = row[0]
             if not is_valid_keyid(node_id):
                 collector.add(
                     "id.invalid",
-                    "ID должен быть непустым хэшируемым объектом",
+                    "ID must be a non-empty hashable object",
                     row=row_number,
                     column=1,
                     value=node_id,
@@ -670,7 +670,7 @@ def _expand_sparse_lp(
         if not changed:
             collector.add(
                 "lp.sparse.no_value",
-                "Sparse-строка не содержит нового значения листа",
+                "Sparse row does not contain a new leaf value",
                 row=row_number,
                 value=row,
             )
@@ -678,10 +678,10 @@ def _expand_sparse_lp(
         if len(changed) > 1:
             collector.add(
                 "lp.sparse.multiple_values",
-                "Sparse-строка должна содержать ровно одно новое значение листа",
+                "Sparse row must contain exactly one new leaf value",
                 row=row_number,
                 value=row,
-                expected="одна непустая ячейка leaf-пути",
+                expected="one non-empty leaf path cell",
             )
         index = changed[0]
         stamp[index] = carrier[index]
@@ -691,7 +691,7 @@ def _expand_sparse_lp(
             if is_empty(value):
                 collector.add(
                     "lp.sparse.unresolved",
-                    "Значение sparse-пути невозможно восстановить из предыдущих строк",
+                    "Sparse path value cannot be restored from previous rows",
                     row=row_number,
                     column=missing_index + (2 if ids else 1),
                 )
@@ -709,7 +709,7 @@ def _validate_lp(
     if len(leaf_keys) > 1:
         collector.add(
             "lp.leaf_keys.extra",
-            "LP использует только первый ключ листа; остальные будут проигнорированы",
+            "LP uses only the first leaf key; extra keys will be ignored",
             value=leaf_keys[1:],
             severity="warning",
         )
@@ -744,7 +744,7 @@ def validate_input(
         else:
             collector.add(
                 "style.unsupported",
-                "Тип стиля не поддерживается",
+                "Style type is not supported",
                 value=styler,
             )
     return collector.report(len(rows))
@@ -758,14 +758,14 @@ def validate_taxonomy(
     if not isinstance(taxonomy, Taxonomy):
         collector.add(
             "taxonomy.type",
-            "Ожидался объект Taxonomy",
+            "Expected a Taxonomy object",
             value=taxonomy,
         )
         return collector.report(0)
     if not taxonomy:
         collector.add(
             "taxonomy.empty",
-            "Таксономия не содержит узлов",
+            "Taxonomy contains no nodes",
             severity="warning",
         )
     checked = 0
@@ -774,7 +774,7 @@ def validate_taxonomy(
             if not is_valid_keyid(node_id):
                 collector.add(
                     "taxonomy.id.invalid",
-                    "В модели обнаружен некорректный ID",
+                    "Invalid ID found in the model",
                     row=checked,
                     column=column,
                     value=node_id,
@@ -782,7 +782,7 @@ def validate_taxonomy(
         if not isinstance(branch.leaves, Mapping):
             collector.add(
                 "taxonomy.leaves.type",
-                "Листья узла не являются отображением",
+                "Node leaves are not a mapping",
                 row=checked,
                 value=branch.leaves,
             )
@@ -791,7 +791,7 @@ def validate_taxonomy(
             if not is_valid_keyid(key):
                 collector.add(
                     "taxonomy.leaf_key.invalid",
-                    "В модели обнаружен некорректный ключ листа",
+                    "Invalid leaf key found in the model",
                     row=checked,
                     value=key,
                 )

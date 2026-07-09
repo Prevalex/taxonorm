@@ -9,7 +9,7 @@ W_CODEPAGE = 'utf-8'
 R_CODEPAGE = 'utf-8-sig'
 UTF8_BOM = 'utf-8-sig'
 DEFAULT_LEAF_KEY = '@'
-STYLE_ACCURACY = 0.05  # процент ошибки, который мы считаем допустимым при угадывании стиля таксономии.
+STYLE_ACCURACY = 0.05  # Allowed error rate when guessing a taxonomy style.
 SNIFFER_ACCURACY = 2/3
 
 @dataclass
@@ -20,9 +20,10 @@ class tMapper:
              ...
                 }
 
-    keymap: индексы ключей листьев { key1: index1, key2: index2, ...} где индекс - это индекс ключа в списке ключей
-    min_width - минимальная длина пути id
-    max_width - максимальная длина пути id
+    keymap: leaf key indexes {key1: index1, key2: index2, ...}, where
+        each index points into the leaf key list
+    min_width - minimum ID path length
+    max_width - maximum ID path length
     """
     idmap: dict
     keymap: dict
@@ -42,32 +43,28 @@ class tStyle:
 
 @dataclass(frozen=True, slots=True)
 class IpStyle(tStyle):
-    # описывает свойства IP Стиля, предназначен для сокращения числа ключевых параметров, передаваемых функциям и
-    # для более строгого контроля перечня и значений таких параметров
-    header: bool | None  # Наличие (Да/Нет) заголовка
-    keys: bool | None  # Ключи хранятся (Да/Нет)  в таксономии
-    tabbed: bool | None  # Табулированный (Да/Нет)
+    # IP style flags used to keep parser/serializer signatures compact.
+    header: bool | None  # Whether the table has a header.
+    keys: bool | None  # Whether leaf keys are stored in the table.
+    tabbed: bool | None  # Whether the ID path is tab-indented.
 
     @property
     def hints(self):
-        # получаем ЗНАЧЕНИЕ свойства базового класса и добавляем префикс
         base = super(IpStyle, self).hints
         return ['IP', *base]
 
 
 @dataclass(frozen=True, slots=True)
 class LpStyle(tStyle):
-    # описывает свойства LP Стиля, предназначен для сокращения числа ключевых параметров, передаваемых функциям и
-    # для более строгого контроля перечня и значений таких параметров
-    header: bool | None  # Наличие (Да/Нет) заголовка
-    ids: bool | None  # Идентификаторы ветвей хранятся (Да/Нет) в таксономии
-    sparse: bool | None  # Разреженная (Да/Нет) таксономия
+    # LP style flags used to keep parser/serializer signatures compact.
+    header: bool | None  # Whether the table has a header.
+    ids: bool | None  # Whether branch IDs are stored in the table.
+    sparse: bool | None  # Whether the table uses sparse leaf paths.
 
     @property
     def hints(self):
-        # получаем ЗНАЧЕНИЕ свойства базового класса и добавляем префикс
         base = super(LpStyle, self).hints
-        return ['LP', *base]  # или ['IP', *base]
+        return ['LP', *base]
 
 tStyler: TypeAlias = IpStyle | LpStyle
 

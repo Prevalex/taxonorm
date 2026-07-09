@@ -37,11 +37,11 @@ def _is_non_empty_hashable(value: object) -> bool:
 def _validated_path(path: Iterable[NodeId]) -> IdPath:
     result = tuple(path)
     if not result:
-        raise TxValidationError("Путь узла не может быть пустым")
+        raise TxValidationError("Node path cannot be empty")
     for node_id in result:
         if not _is_non_empty_hashable(node_id):
             raise TxValidationError(
-                f"ID узла должен быть непустым хэшируемым объектом: {node_id!r}"
+                f"Node ID must be a non-empty hashable object: {node_id!r}"
             )
     return result
 
@@ -49,13 +49,13 @@ def _validated_path(path: Iterable[NodeId]) -> IdPath:
 def _validated_leaves(leaves: Mapping[LeafKey, Any]) -> Leaves:
     if not isinstance(leaves, Mapping):
         raise TxValidationError(
-            f"Листья узла должны быть отображением, получено: {type(leaves).__name__}"
+            f"Node leaves must be a mapping, got: {type(leaves).__name__}"
         )
     result = dict(leaves)
     for key in result:
         if not _is_non_empty_hashable(key):
             raise TxValidationError(
-                f"Ключ листа должен быть непустым хэшируемым объектом: {key!r}"
+                f"Leaf key must be a non-empty hashable object: {key!r}"
             )
     return result
 
@@ -68,7 +68,7 @@ def _validated_missed_leaf(
     if isinstance(missed_leaf, str):
         if missed_leaf != "auto":
             raise TxValidationError(
-                'missed_leaf должен быть функцией, None или строкой "auto"'
+                'missed_leaf must be a callable, None, or the string "auto"'
             )
 
         def missing_leaf_value(leaf_key: LeafKey, id_path: IdPath) -> Any:
@@ -78,7 +78,7 @@ def _validated_missed_leaf(
     if callable(missed_leaf):
         return missed_leaf
     raise TxValidationError(
-        'missed_leaf должен быть функцией, None или строкой "auto"'
+        'missed_leaf must be a callable, None, or the string "auto"'
     )
 
 
@@ -130,9 +130,9 @@ class Taxonomy:
         taxonomy = cls()
         for index, branch in enumerate(branches):
             if not isinstance(branch, Sequence) or isinstance(branch, (str, bytes)):
-                raise TxValidationError(f"Ветвь #{index} не является последовательностью")
+                raise TxValidationError(f"Branch #{index} is not a sequence")
             if len(branch) < 2:
-                raise TxValidationError(f"Слишком короткая ветвь #{index}: {branch!r}")
+                raise TxValidationError(f"Branch #{index} is too short: {branch!r}")
             taxonomy.add_branch(branch[:-1], branch[-1])
         return taxonomy
 
@@ -192,7 +192,7 @@ class Taxonomy:
 
         assert node is not None
         if node._leaves is not None and not replace:
-            raise TxValidationError(f"Путь {id_path!r} дублируется")
+            raise TxValidationError(f"Path {id_path!r} is duplicated")
         node._leaves = leaf_values
         return node
 
@@ -224,7 +224,7 @@ class Taxonomy:
         node = children[id_path[-1]]
         if node._children and not recursive:
             raise TxValidationError(
-                f"Узел {id_path!r} имеет дочерние узлы; укажите recursive=True"
+                f"Node {id_path!r} has child nodes; pass recursive=True"
             )
 
         subtree_size = 0
@@ -254,10 +254,10 @@ class Taxonomy:
         target_id = source_path[-1] if new_id is None else new_id
         if not _is_non_empty_hashable(target_id):
             raise TxValidationError(
-                f"ID узла должен быть непустым хэшируемым объектом: {target_id!r}"
+                f"Node ID must be a non-empty hashable object: {target_id!r}"
             )
         if destination_parent[: len(source_path)] == source_path:
-            raise TxValidationError("Нельзя переместить узел внутрь его поддерева")
+            raise TxValidationError("Cannot move a node inside its own subtree")
 
         source_parent_node: TaxonomyNode | None = None
         source_children = self._roots
@@ -282,7 +282,7 @@ class Taxonomy:
             same_parent and target_id == source_path[-1]
         ):
             raise TxValidationError(
-                f"У родителя {destination_parent!r} уже есть дочерний ID {target_id!r}"
+                f"Parent {destination_parent!r} already has child ID {target_id!r}"
             )
         if same_parent:
             if target_id == source_path[-1]:
@@ -325,7 +325,7 @@ class Taxonomy:
     ) -> Iterator[TaxonomyBranch]:
         """Yield every node using stable preorder, postorder, or breadth-first traversal."""
         if order not in {"preorder", "postorder", "breadth"}:
-            raise ValueError(f"Неизвестный порядок обхода: {order!r}")
+            raise ValueError(f"Unknown traversal order: {order!r}")
 
         if order == "breadth":
             queue: deque[tuple[IdPath, TaxonomyNode]] = deque(
@@ -412,16 +412,30 @@ class Taxonomy:
             children = node._children if node._children is not None else {}
         return tuple(values)
 
-    def iter_leaf_paths(
+    def iter_paths(
         self,
-        key: LeafKey,
+        key: LeafKey | None = None,
         *,
         order: TraversalOrder = "preorder",
         missed_leaf: MissedLeaf = "auto",
     ) -> Iterator[tuple[IdPath, tuple[Any, ...]]]:
-        """Yield ``(id_path, leaf_path)`` pairs for *key*."""
+        """Yield ``(id_path, leaf_path)`` pairs for *key*.
+
+        When *key* is omitted, the first key returned by ``leaf_keys()`` is
+        used.  Empty taxonomies yield nothing.
+        """
         if order not in {"preorder", "postorder", "breadth"}:
-            raise ValueError(f"Неизвестный порядок обхода: {order!r}")
+            raise ValueError(f"Unknown traversal order: {order!r}")
+        if key is None:
+            keys = self.leaf_keys()
+            if not keys:
+                if not self:
+                    return
+                raise TxValidationError(
+                    "Cannot choose a leaf key automatically: "
+                    "taxonomy contains no leaves"
+                )
+            key = keys[0]
         missing_leaf_value = _validated_missed_leaf(missed_leaf)
 
         def leaf_value(node: TaxonomyNode, path: IdPath) -> Any:
@@ -484,3 +498,17 @@ class Taxonomy:
                     stack.append(
                         (child_path, child, values + (leaf_value(child, child_path),))
                     )
+
+    def iter_leaf_paths(
+        self,
+        key: LeafKey,
+        *,
+        order: TraversalOrder = "preorder",
+        missed_leaf: MissedLeaf = "auto",
+    ) -> Iterator[tuple[IdPath, tuple[Any, ...]]]:
+        """Yield ``(id_path, leaf_path)`` pairs for *key*.
+
+        ``iter_paths()`` is the preferred name; this method is kept as a
+        compatibility alias.
+        """
+        return self.iter_paths(key, order=order, missed_leaf=missed_leaf)

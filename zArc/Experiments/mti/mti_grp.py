@@ -1,4 +1,4 @@
-from alib.csv_io import read_llist_from_csv_file, save_llist_to_csv_file
+from taxonorm._tables import read_llist_from_csv_file, save_llist_to_csv_file
 
 llist = read_llist_from_csv_file('mti_grp.csv')
 save_llist_to_csv_file(llist, 'mti_grp.csv') # for utf-8 BOM

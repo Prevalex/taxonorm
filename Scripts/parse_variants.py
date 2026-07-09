@@ -2,8 +2,7 @@
 from typing import Any
 from pathlib import Path
 from collections.abc import Callable
-from alib.viewers import plist
-from alib.files import read_pydata_from_json_file
+import json
 
 from colorama import Fore, just_fix_windows_console
 
@@ -38,6 +37,18 @@ def cvt(v):
             return str(v)
 
 cvt_dic = {'*':cvt}
+
+
+def read_pydata_from_json_file(filename: str | Path):
+    return json.loads(Path(filename).read_text(encoding="utf-8"))
+
+
+def plist(*values, labels=None, limit=10):
+    labels = labels or [f"{index}:" for index in range(len(values))]
+    for label, value in zip(labels, values):
+        print(label)
+        for item in list(value)[:limit]:
+            print(f"  {item!r}")
 
 def load_variant(filename: str | Path, *,
                  leaf_keys: list | tuple | None = None,

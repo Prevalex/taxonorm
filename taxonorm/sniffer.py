@@ -5,36 +5,33 @@ from pathlib import Path
 from collections.abc import Hashable
 from collections import Counter
 
-from alib.sequences import is_empty_list, count_non_empty, take_items_of_list_from_other_list
-from alib.introspection import inspect_location
-from alib.validation import is_empty
-from alib.tables import read_llist_from_file, is_llist
+from taxonorm._sequences import is_empty_list, count_non_empty, take_items_of_list_from_other_list
+from taxonorm._introspection import inspect_location
+from taxonorm._validation import is_empty
+from taxonorm._tables import read_llist_from_file, is_llist
 
 from taxonorm.common import IpStyle, LpStyle, tStyler, SNIFFER_ACCURACY
 from taxonorm.errors import TxValidationError, TxInternalError
 from taxonorm.validation import validate_leaf_keys, validate_branch_list
 
 def scan_right_tab(items: list) -> int:
-    """
-    Для строки вида:
+    """Return the index right after the first empty-cell run.
+
+    For a row such as:
      [222,223,1420,None,None,None,"Audio Accessories"]
 
-    Возвращает индекс элемента сразу после первого участка None
-    или:
-        0 — если None отсутствует;
-        -1 — если участок None заканчивается вместе со списком.
+    Returns:
+        0 if no empty run exists, or -1 if the empty run reaches the row end.
     """
     n = len(items)
     t = 0
 
-    # Ищем начало первого участка None
     while t < n and not is_empty(items[t]):
         t += 1
 
     if t == n:
         return 0
 
-    # Ищем конец этого участка
     while t < n and is_empty(items[t]):
         t += 1
 
@@ -45,12 +42,10 @@ def scan_key_occurrences(leaf_keys:list[Hashable], branch:list[Any]):
     return int(bool(take_items_of_list_from_other_list(leaf_keys, branch)))
 
 def is_sparse_row(row: list[Any]) -> bool:
-    """
-    Определяет, соответствует ли строка (список) одному из sparse-форматов.
+    """Return whether a row matches one of the sparse LP shapes.
 
-    Строка считается sparse, если:
-     строка имеет одно непустое значение
-     строка имеет два непустых значения, _и_ одно из них - первое в строке (индекс 0)
+    A row is considered sparse when it has either one non-empty value or two
+    non-empty values where one of them is the first cell.
     """
 
     non_empty_indexes = [
@@ -59,18 +54,13 @@ def is_sparse_row(row: list[Any]) -> bool:
         if not is_empty(value)
     ]
 
-    # Полностью пустая строка не считается sparse
     if not non_empty_indexes:
         return False
 
-    # Вид 2: во всей строке только одно непустое значение
     if len(non_empty_indexes) == 1:
         return True
 
-    # Вид 1: ровно два непустых значения,
-    # первое обязательно находится в позиции 0.
-    #
-    # Допустимы варианты:
+    # Accepted two-value sparse shapes:
     # [ID, Value]
     # [ID, None, Value]
     # [ID, None, None, Value, None]
@@ -85,10 +75,7 @@ def is_t(tabs:list[int], rows:int):
     """ Is this taxonomy presented in tabular form? """
     count_tabs = Counter(tabs)
     most_tabs = count_tabs.most_common(1)
-    # если индекс табуляции (первый элемент после разрыва из пустых элементов) - имеет индекс три и больше
     if most_tabs[0][0] > 2: # [id1, None, leaf1, leaf2, ..]
-        # если индекс табуляции, который встречается чаще всего - встречается более чем в
-        # SNIFFER_ACCURACY * rows числе строк
         if most_tabs[0][1] >= SNIFFER_ACCURACY * rows:
             return True
     return False
@@ -124,17 +111,16 @@ def is_k(keys:list[int], rows:int):
 
 def is_h(branch_list:list[list[Any]]):
 
-    if len(branch_list) < 1: # если нет строк
+    if len(branch_list) < 1:
         return False
 
-    if len(branch_list) < 2: # если всего одна строка
+    if len(branch_list) < 2:
         return True
 
-    if is_empty_list(branch_list[0]): # если пустая первая строка
+    if is_empty_list(branch_list[0]):
         return True
 
-    # Есть ли элементы первой строки, которые есть и во второй строке? (тогда и первая и вторая - ветки,
-    # а не заголовок и ветка)
+    # Common values in the first two rows usually mean both rows are branches.
     have_common_elements  = scan_key_occurrences(branch_list[0], branch_list[1])   # 0 or 1
 
     if have_common_elements  > 0:
@@ -242,12 +228,8 @@ def guess_style(taxonomy: Path | str | list[list[Any]], leaf_keys:list[Hashable]
 
         spr = int(is_sparse_row(branch))
 
-        # если примерно: то если единиц много больше двоек - это LP_NI
-        # если точно:  двоек должно быть <= единиц)
         if len(branch) == 1:
             inits.append(1)
-        # если примерно, то если двоек много больше единиц - это IP_NT / LP_I
-        # (если точно - единиц вообще не должно быть)
         elif len(branch) == 2:
             inits.append(2)
         else:

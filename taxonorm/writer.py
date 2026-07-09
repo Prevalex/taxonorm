@@ -4,8 +4,7 @@
 from pathlib import Path
 from typing import Hashable, Callable
 
-from alib.tables import save_llist_to_file
-from alib.files import is_opened
+from taxonorm._tables import save_llist_to_file, is_opened
 
 from taxonorm.common import tStyler, UTF8_BOM
 from taxonorm.model import Taxonomy
@@ -26,7 +25,7 @@ def export_taxonomy(taxonomy: Taxonomy, filename: str | Path, *,
     _ok, _msg = True, ''
 
     if is_opened(filename):
-        raise TxExportError(f'Файл {filename} открыт в другом приложении')
+        raise TxExportError(f"File {filename} is open in another application")
 
     serial = serialize_taxonomy(
         taxonomy,

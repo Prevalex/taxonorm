@@ -2,9 +2,8 @@
 from typing import Any
 from pathlib import Path
 from collections.abc import Hashable
-from alib.tables import read_llist_from_file
-
 from colorama import Fore, just_fix_windows_console
+from taxonorm._tables import read_llist_from_file
 from taxonorm.utils import get_style_from_hints
 from taxonorm.sniffer import guess_style
 from taxonorm.pathfinder import briefs_dir

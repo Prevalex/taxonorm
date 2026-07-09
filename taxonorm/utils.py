@@ -4,26 +4,24 @@ domain aware helpers
 import re
 from typing import Iterable
 
-from alx.cons import inspect_upper_name, inspect_name
+from taxonorm._introspection import inspect_upper_name, inspect_name
 from taxonorm.common import IpStyle, LpStyle, tStyler
 
 
 def get_bools_from_hints(s: str,
                          variables: Iterable[str],
                          fill_missing: bool = True) -> dict[str, bool | None]:
-    """
-    GPT5: Разбирает строку s и извлекает булевы значения для переменных.
-    Токены: 'VAR'/'NVAR' для каждой переменной VAR (имя в верхнем регистре).
-    Разделители: '_' или границы строки; справа также допускается '.'.
+    """Parse boolean style hints from *s*.
 
-    # --- пример для parse_bool_hints ---
+    Tokens use ``VAR``/``NVAR`` for each upper-cased variable name. Tokens are
+    separated by underscores or string boundaries; a dot is also accepted on
+    the right side.
+
     s = "LP_K_NH_S.xlsx"
     print(parse_bool_hints(s, variables=("k", "i", "s", "h", "lp", "ip", "t")))
     # {'k': True, 'i': None, 's': True, 'h': False, 'lp': True, 'ip': None, 't': None}
     """
-    # карта: верхний регистр -> оригинальное имя
     upper_to_var = {v.upper(): v for v in variables}
-    # регулярка: (N?)(AB|CD|...) с учётом границ
     alternation = "|".join(map(re.escape, upper_to_var.keys()))
     pattern = re.compile(rf'(^|_)(N?)({alternation})(?=(_|$|\.))')
 
@@ -35,35 +33,37 @@ def get_bools_from_hints(s: str,
     for m in pattern.finditer(s):
         neg, name_upper = m.group(2), m.group(3)
         var = upper_to_var[name_upper]
-        value = (neg == "")  # N → False, отсутствие N → True
+        value = neg == ""
         out_dict[var] = value
 
     return out_dict
 
 
 def get_style_from_hints(hint_string) -> tStyler:
-    """
-    Разбирает строку (например, имя файла), где мнемонически закодирован стиль таксономии
+    """Parse a mnemonic taxonomy style from a string, usually a file name.
+
     Args:
-        hint_string: строка может содержать: 'IP', 'H', 'NH', 'K', 'NK', 'T', 'NT'
-                                        или: 'LP', 'H', 'NH', 'I', 'NI', 'S', 'NS'
-        что кодирует IP/LP Style, Header, own_keys, own_ids, sparse, tabbed
+        hint_string: may contain ``IP``, ``H``, ``NH``, ``K``, ``NK``, ``T``,
+            ``NT`` or ``LP``, ``H``, ``NH``, ``I``, ``NI``, ``S``, ``NS``.
+
     Returns:
-        слварь с булевыми значениями мнемоник (hints).
-        * LP и IP не могут быть указаны одновременно
-        * Мнемоники ближе к концу строки затирают предыдущие: _H_NH ознаает {'h':False,...}
-        * Если мнемоника не указана, то значение соответствующего атрибута будет None
+        An ``IpStyle`` or ``LpStyle`` decoded from the hints. Later hints
+        override earlier ones, so ``_H_NH`` means ``header=False``.
     """
 
     hints = get_bools_from_hints(hint_string, ("lp", "ip", "h", "k", "i", "s", "t"))
 
     if isinstance(hints['lp'], bool) and isinstance(hints['ip'], bool):
-        raise ValueError(f'{inspect_upper_name()}|{inspect_name()}: В строке {repr(hint_string)} одновременно указан '
-                         f'стиль LP и IP. Необходимо указать только один из них.')
+        raise ValueError(
+            f"{inspect_upper_name()}|{inspect_name()}: {hint_string!r} "
+            "contains both LP and IP style hints. Specify only one style."
+        )
 
     if hints['lp'] is None and hints['ip'] is None:
-        raise ValueError(f'{inspect_upper_name()}|{inspect_name()}: В строке {repr(hint_string)} не указан стиль '
-                         f' LP или IP. Необходимо указать один из них.')
+        raise ValueError(
+            f"{inspect_upper_name()}|{inspect_name()}: {hint_string!r} "
+            "does not contain an LP or IP style hint. Specify one style."
+        )
 
     ip_style = bool(hints['ip'])
 
@@ -77,9 +77,7 @@ def get_style_from_hints(hint_string) -> tStyler:
 
 
 def branch_till_eol(branch, eol=None):
-    """
-    Возвращает ветку от начала и до первого появления eol. Если eol=None, то обрезание ветки не производится.
-    """
+    """Return the branch prefix up to the first *eol* marker."""
     if eol is None:
         return branch
     elif eol not in branch:

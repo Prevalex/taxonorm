@@ -1,44 +1,55 @@
-# Библиотека taxonorm
+# taxonorm
 
-Пакет/библиотека taxonorm предоставляет методы загрузки любого из
-предусмотренных и описанных ниже форматов таксономии из csv или xlsx и
-сохранения в любой из предусмотренный ниже форматов таксономии. Публичный
-API возвращает и принимает объект `Taxonomy`. Табличное представление ветвей
-`[id1, ..., idN, {leaf_key: value}]` используется на границах импорта,
-парсинга и сериализации.
+`taxonorm` loads taxonomy tables from CSV, XLS, and XLSX files, normalizes
+them into one in-memory model, and exports them back to supported taxonomy
+formats. The public API accepts and returns `Taxonomy`. The branch table
+representation `[id1, ..., idN, {leaf_key: value}]` is used at parser,
+serializer, import, and export boundaries.
 
-## Публичный API
+Russian documentation is preserved in [README.ru.md](README.ru.md).
+Terminology for future documentation and message translation is tracked in
+[docs/GLOSSARY.md](docs/GLOSSARY.md).
 
-### Рабочие примеры
+## Public API
 
-В примерах ниже используется одна и та же небольшая таксономия из
-`Samples/Variants/Shorts`: бытовая техника, электроника и серверные решения.
-В этой папке лежит одна структура, сохранённая в разных стилях и форматах.
+### Runnable Examples
 
-Небольшие запускаемые примеры находятся в `Examples/`:
+The examples below use the same small taxonomy from
+`Samples/Variants/Shorts`: household appliances, electronics, and enterprise
+server solutions. That directory contains the same structure saved in several
+formats and styles.
 
-- [sample_import.py](Examples/sample_import.py) — импорт CSV в стиле
-  `IpStyle(header=True, keys=True, tabbed=True)` и базовый просмотр модели;
-- [sample_parse_rows.py](Examples/sample_parse_rows.py) — парсинг таблицы,
-  уже прочитанной в память;
-- [sample_model_ops.py](Examples/sample_model_ops.py) — поиск, `leaf_path()`,
-  изменение листьев, переименование и перенос поддерева;
-- [sample_export.py](Examples/sample_export.py) — экспорт той же таксономии в
-  другой стиль;
-- [sample_validate.py](Examples/sample_validate.py) — пользовательский отчёт
-  валидации;
-- [view_taxonomy.py](Examples/view_taxonomy.py) — утилита просмотра дерева в
-  режимах `text`, `interactive` и `pyvis`.
+Small runnable examples live in `Examples/`:
 
-### Основная модель
+- [sample_import.py](Examples/sample_import.py) imports a CSV in
+  `IpStyle(header=True, keys=True, tabbed=True)` and inspects the model;
+- [sample_parse_rows.py](Examples/sample_parse_rows.py) parses rows that are
+  already loaded in memory;
+- [sample_api_tour.py](Examples/sample_api_tour.py) is a compact tour through
+  `from_branches()`, `guess_style()`, `validate_taxonomy()`,
+  `serialize_taxonomy()`, equality, ID renumbering, and exception handling;
+- [sample_model_ops.py](Examples/sample_model_ops.py) demonstrates lookup,
+  `leaf_path()`, leaf updates, node renaming, and subtree moves;
+- [sample_iter_paths.py](Examples/sample_iter_paths.py) compares
+  `iter_branches()` and `iter_paths()` for bulk path views;
+- [sample_chunks.py](Examples/sample_chunks.py) restores and splits unique-ID
+  IP chunks;
+- [sample_export.py](Examples/sample_export.py) exports the same taxonomy to
+  another style;
+- [sample_validate.py](Examples/sample_validate.py) prints a user-facing
+  validation report;
+- [view_taxonomy.py](Examples/view_taxonomy.py) is a tree viewer utility with
+  `text`, `interactive`, and `pyvis` modes.
 
-`Taxonomy` — каноническое представление таксономии в памяти. Объект может
-содержать один корень или несколько независимых корней (лес). Узел однозначно
-определяется полным путём ID от корня; поэтому один и тот же ID разрешено
-использовать в разных ветвях.
+### Core Model
 
-Пустую изменяемую модель можно создать обычным конструктором `Taxonomy()`.
-`from_branches()` удобнее, когда исходные ветви уже находятся в памяти.
+`Taxonomy` is the canonical in-memory taxonomy representation. It may contain
+one root or several independent roots, so it is technically a forest. A node is
+identified by its full ID path from a root; the same node ID may therefore be
+used in different branches.
+
+Create an empty mutable model with `Taxonomy()`. Use `from_branches()` when
+the source branches are already in memory.
 
 ```python
 from taxonorm import Taxonomy
@@ -52,27 +63,26 @@ taxonomy = Taxonomy.from_branches([
 ])
 ```
 
-В варианте `Samples/Variants/Shorts/SHORT_2L_NU.json` та же таксономия
-сохранена с неуникальными ID. Например, ID `1` может встречаться под разными
-корнями, но пути `(101, 1)` и `(102, 1)` обозначают разные узлы.
+The `Samples/Variants/Shorts/SHORT_2L_NU.json` variant stores the same
+taxonomy with non-unique IDs. For example, ID `1` may appear under different
+roots, but paths `(101, 1)` and `(102, 1)` still identify different nodes.
 
-Основные инварианты:
+Core invariants:
 
-- ID узла — любой непустой хэшируемый объект;
-- ключ листа — любой непустой хэшируемый объект;
-- значение листа — любой объект, включая `None` и нехэшируемые объекты;
-- точный ID-путь не может встречаться дважды;
-- порядок корней и соседних узлов стабилен и соответствует порядку добавления.
+- a node ID is any non-empty hashable object;
+- a leaf key is any non-empty hashable object;
+- a leaf value is any object, including `None` and unhashable objects;
+- an exact ID path cannot appear twice;
+- root and sibling order is stable and follows insertion order.
 
-Пустыми считаются `None`, пустые и состоящие из пробелов строки, пустые
-кортежи и другие пустые контейнеры. Числа `0` и `False` допустимы, однако
-следует помнить, что стандартные словари Python считают `0` и `False` равными
-ключами.
+`None`, empty strings, whitespace-only strings, empty tuples, and other empty
+containers are considered empty. Numeric `0` and `False` are valid, but keep in
+mind that Python dictionaries treat `0` and `False` as equal keys.
 
-### Создание из таблицы ветвей
+### Creating From a Branch Table
 
-`Taxonomy.from_branches()` принимает итерируемый объект, где каждая ветвь
-содержит ID-путь и завершается отображением листьев:
+`Taxonomy.from_branches()` accepts an iterable where each branch contains an
+ID path and ends with a leaves mapping:
 
 ```python
 taxonomy = Taxonomy.from_branches([
@@ -81,8 +91,8 @@ taxonomy = Taxonomy.from_branches([
 ])
 ```
 
-Если присутствует дочерняя ветвь, но отдельная строка предка отсутствует,
-модель создаст недостающего предка с пустыми листьями:
+If a child branch is present but an ancestor row is missing, the model creates
+the missing ancestor with empty leaves:
 
 ```python
 taxonomy = Taxonomy.from_branches([
@@ -92,20 +102,21 @@ taxonomy = Taxonomy.from_branches([
 assert taxonomy.get_node((1,)).leaves == {}
 ```
 
-`to_branches()` выполняет обратное преобразование и возвращает все узлы в
-стабильном preorder-порядке:
+`to_branches()` converts the model back to branch-table form and returns all
+nodes in stable preorder:
 
 ```python
 rows = taxonomy.to_branches()
 # [[1, {}], [1, 12, {}], [1, 12, 22, {}], [1, 12, 22, 31, {"en_US": "Freezers"}]]
 ```
 
-Списки ветвей и словари листьев копируются. Сами значения листьев копируются
-поверхностно: вложенный изменяемый объект остаётся тем же объектом.
+Lists of branches and leaves dictionaries are copied defensively. Leaf values
+are copied shallowly: nested mutable objects keep their original identity.
 
-### Чтение файла
+### Reading Files
 
-`import_taxonomy()` читает CSV, XLS или XLSX и всегда возвращает `Taxonomy`:
+`import_taxonomy()` reads CSV, XLS, or XLSX files and always returns
+`Taxonomy`:
 
 ```python
 from taxonorm import IpStyle, import_taxonomy
@@ -117,7 +128,7 @@ taxonomy = import_taxonomy(
 )
 ```
 
-Если `styler` не указан, библиотека попытается определить стиль автоматически:
+If `styler` is omitted, taxonorm tries to guess the style:
 
 ```python
 taxonomy = import_taxonomy(
@@ -126,25 +137,25 @@ taxonomy = import_taxonomy(
 )
 ```
 
-Автоопределение является эвристикой. Для неоднозначных или внешних данных
-рекомендуется явно передавать `IpStyle` либо `LpStyle`.
+Style guessing is heuristic. For ambiguous or external data, prefer passing
+`IpStyle` or `LpStyle` explicitly.
 
 ```python
 from taxonorm import IpStyle
 
 style = IpStyle(
-    header=True,  # первая строка является заголовком
-    keys=True,    # ключи листьев находятся в файле
-    tabbed=True,  # ID и листья выровнены по столбцам
+    header=True,  # the first row is a header
+    keys=True,    # leaf keys are present in the file
+    tabbed=True,  # IDs and leaves are aligned by columns
 )
 ```
 
-Для `LpStyle` используются свойства `header`, `ids` и `sparse`.
-Для `IpStyle` — `header`, `keys` и `tabbed`. Подробное описание всех сочетаний
-стилей находится ниже в этом документе.
+`LpStyle` uses `header`, `ids`, and `sparse`. `IpStyle` uses `header`, `keys`,
+and `tabbed`. The supported style combinations are described throughout this
+document and exercised by the sample files.
 
-Аргумент `cvt_dict` позволяет преобразовать прочитанные значения. Например,
-чтобы восстанавливать числовые ID из строк CSV:
+Use `cvt_dict` to convert values while reading. For example, restore numeric
+IDs from CSV strings:
 
 ```python
 def as_int_when_possible(value):
@@ -162,13 +173,13 @@ taxonomy = import_taxonomy(
 )
 ```
 
-Полный запускаемый вариант этого сценария находится в
-[Examples/sample_import.py](Examples/sample_import.py).
+See [Examples/sample_import.py](Examples/sample_import.py) for a full runnable
+version.
 
-### Низкоуровневый парсинг и определение стиля
+### Low-Level Parsing and Style Guessing
 
-Если таблица уже прочитана другим кодом, `parse_taxonomy()` преобразует её в
-`Taxonomy` без файлового ввода-вывода:
+If a table is already loaded by other code, `parse_taxonomy()` converts it to
+`Taxonomy` without file I/O:
 
 ```python
 from taxonorm import LpStyle, parse_taxonomy
@@ -185,19 +196,19 @@ taxonomy = parse_taxonomy(
 )
 ```
 
-Полный запускаемый вариант находится в
-[Examples/sample_parse_rows.py](Examples/sample_parse_rows.py).
+See [Examples/sample_parse_rows.py](Examples/sample_parse_rows.py) for a full
+runnable version.
 
-`guess_style(rows, leaf_keys=[...])` возвращает предполагаемый `IpStyle` или
-`LpStyle`, но не выполняет парсинг. Результат сниффера следует считать
-подсказкой, а не доказательством корректности входных данных.
+`guess_style(rows, leaf_keys=[...])` returns a likely `IpStyle` or `LpStyle`,
+but does not parse anything. Treat the result as a hint, not a proof of input
+correctness. See [Examples/sample_api_tour.py](Examples/sample_api_tour.py).
 
-### Восстановление IP-обрезков
+### Restoring IP Chunks
 
-Некоторые IP-таблицы задают не полные пути, а обрезки путей. Крайний случай —
-TP-таблица вида `parent_id, node_id, leaf`, но обрезок может содержать и больше
-двух ID. Такие данные можно восстановить только если каждый ID узла имеет не
-более одного родителя во всей таксономии:
+Some IP tables store partial paths rather than full paths. The smallest case
+is a TP-style table such as `parent_id, node_id, leaf`, but a chunk may contain
+more than two IDs. These data can be restored only when each node ID has at
+most one parent in the whole taxonomy:
 
 ```python
 from taxonorm import IpStyle, import_taxonomy
@@ -210,8 +221,8 @@ taxonomy = import_taxonomy(
 )
 ```
 
-Если таблица уже разобрана в обменный вид `[id1, ..., idN, {key: value}]`,
-можно использовать низкоуровневую функцию:
+If the table is already in the exchange form `[id1, ..., idN, {key: value}]`,
+use the low-level helpers:
 
 ```python
 from taxonorm import restore_unique_ip_chunks, split_to_unique_ip_chunks
@@ -220,20 +231,21 @@ branches = restore_unique_ip_chunks(chunks)
 chunks = split_to_unique_ip_chunks(taxonomy, max_chunk_len=2)
 ```
 
-При неоднозначном родителе, цикле или конфликтующих листьях для одного ID
-возникает `TxParsingError`. По умолчанию `restore_ip_chunks=False`, поэтому
-обычный IP-импорт остаётся без изменений. Для IP-обрезков без собственных
-ключей последние ячейки строки сопоставляются с `leaf_keys` по обычному правилу
-`IP_NK`: их число должно совпадать с числом ключей. Для TP-строк с одним
-значением листа передавайте один ключ. При экспорте и сериализации IP-стилей
-можно передать `max_chunk_len=2` или больше: тогда таксономия с уникальными ID
-будет сохранена как IP-обрезки указанной максимальной длины.
+See [Examples/sample_chunks.py](Examples/sample_chunks.py).
 
-### Валидация входных данных
+Ambiguous parents, cycles, or conflicting leaves for the same ID raise
+`TxParsingError`. `restore_ip_chunks=False` by default, so normal IP imports
+are unchanged. For IP chunks without explicit keys, the last cells are matched
+to `leaf_keys` using the usual `IP_NK` rule: their count must match the number
+of keys. For TP rows with one leaf value, pass one key. During IP export and
+serialization, pass `max_chunk_len=2` or higher to save a taxonomy with unique
+IDs as bounded-length IP chunks.
 
-`validate_input()` проверяет внешнюю таблицу без парсинга и никогда не
-прерывает работу из-за найденных ошибок. Метод возвращает `ValidationReport`,
-содержащий все обнаруженные проблемы (до заданного ограничения):
+### Input Validation
+
+`validate_input()` checks an external table without parsing and never stops at
+the first problem. It returns a `ValidationReport` with all discovered issues,
+up to the requested limit:
 
 ```python
 from taxonorm import IpStyle, validate_input
@@ -249,43 +261,43 @@ if not report.valid:
     print(report.format_text())
 ```
 
-См. [Examples/sample_validate.py](Examples/sample_validate.py): там строка,
-похожая на sample-файл, намеренно повреждена, чтобы показать формат отчёта.
+See [Examples/sample_validate.py](Examples/sample_validate.py): it damages a
+row shaped like a sample file to show the report format.
 
-Отчёт различает ошибки и предупреждения:
+The report distinguishes errors and warnings:
 
 ```python
-report.valid       # False, если есть хотя бы одна ошибка
+report.valid       # False if at least one error exists
 report.errors      # tuple[ValidationIssue, ...]
 report.warnings    # tuple[ValidationIssue, ...]
-report.issues      # все диагностики в порядке обнаружения
-report.to_dict()   # структура для JSON, API или журнала
+report.issues      # all diagnostics in discovery order
+report.to_dict()   # structured data for JSON, APIs, or logs
 ```
 
-Каждый `ValidationIssue` содержит:
+Each `ValidationIssue` contains:
 
-| Поле | Значение |
+| Field | Meaning |
 | --- | --- |
-| `code` | Машиночитаемый код, например `id.invalid` или `lp.sparse.unresolved` |
-| `message` | Объяснение проблемы для пользователя |
-| `row` | Номер строки, начиная с 1 |
-| `column` | Номер столбца, начиная с 1, если он применим |
-| `value` | Проблемное входное значение |
-| `expected` | Описание ожидаемого формата |
-| `severity` | `"error"` либо `"warning"` |
+| `code` | Machine-readable code, such as `id.invalid` or `lp.sparse.unresolved` |
+| `message` | Human-readable explanation |
+| `row` | 1-based row number |
+| `column` | 1-based column number, when applicable |
+| `value` | Problematic input value |
+| `expected` | Expected shape or value |
+| `severity` | `"error"` or `"warning"` |
 
-При чтении файла номера относятся к таблице после удаления полностью пустых
-строк файловым reader. Поле `ValidationReport.source` содержит путь исходного
-файла, поэтому отчёты удобно собирать при пакетной проверке каталога.
+When reading a file, row numbers refer to the table after fully empty rows are
+removed by the file reader. `ValidationReport.source` stores the source path,
+which is useful for batch validation.
 
-`format_text()` создаёт предназначенное для человека сообщение:
+`format_text()` creates a user-facing message:
 
 ```text
-IP_H_K_T; источник: damaged-short-sample.csv: обнаружено ошибок: 1; предупреждений: 0.
-[id.missing] строка 2: В строке отсутствует ID-путь Ожидалось: хотя бы один непустой ID.
+IP_H_K_T; source: damaged-short-sample.csv: errors: 1; warnings: 0.
+[id.missing] row 2: The row has no ID path. Expected: at least one non-empty ID.
 ```
 
-Число диагностик ограничивается аргументом `max_issues`:
+Limit the number of diagnostics with `max_issues`:
 
 ```python
 report = validate_input(
@@ -297,26 +309,26 @@ report = validate_input(
 )
 ```
 
-Если проблем больше, `report.truncated` будет равен `True`.
+If more issues exist, `report.truncated` is `True`.
 
-Валидаторы проверяют несколько уровней правил:
+Validators check several rule layers:
 
-- общую структуру таблицы, строки, настройки стиля и `leaf_keys`;
-- наличие и корректность ID;
-- размещение ключей и пар key/value в IP;
-- число значений листьев в IP без собственных ключей;
-- плотные и sparse leaf-пути LP;
-- возможность восстановить пропущенные значения sparse-пути;
-- уникальность ID, ID-путей и конечных значений LP с собственными ID;
-- соответствие заголовка заявленному keyed IP-стилю.
+- general table shape, rows, style settings, and `leaf_keys`;
+- ID presence and validity;
+- key/value placement in IP;
+- leaf value counts in IP without explicit keys;
+- dense and sparse LP leaf paths;
+- whether missing sparse path values can be restored;
+- uniqueness of IDs, ID paths, and terminal LP values with own IDs;
+- whether the header matches the declared keyed IP style.
 
-Предупреждение не запрещает парсинг. Например, LP использует только первый
-ключ из `leaf_keys`; остальные ключи будут отражены предупреждением.
+A warning does not forbid parsing. For example, LP uses only the first
+`leaf_keys` entry; extra keys are reported as warnings.
 
-### Автоматическая валидация при парсинге
+### Automatic Validation During Parsing
 
-`parse_taxonomy()` и `import_taxonomy()` выполняют валидацию автоматически.
-Если отчёт содержит ошибки, поднимается одно `TxInputValidationError`:
+`parse_taxonomy()` and `import_taxonomy()` validate automatically. If the
+report contains errors, taxonorm raises one `TxInputValidationError`:
 
 ```python
 from taxonorm import TxInputValidationError, import_taxonomy
@@ -328,18 +340,19 @@ try:
         leaf_keys=["en_US", "uk_UA"],
     )
 except TxInputValidationError as error:
-    print(error)                 # удобный текст для пользователя
+    print(error)                 # user-facing text
     send_to_api(error.report.to_dict())
 ```
 
-Исключение содержит исходный `ValidationReport` в атрибуте `report`. Его
-`context["validation"]` также попадает в стандартный `TaxonormError.to_dict()`.
-Если внутренний парсер обнаружил редкую ошибку, пропущенную предварительной
-проверкой, пользователь всё равно получает `TxInputValidationError`, а
-исходное исключение сохраняется в `__cause__` для журнала разработчика.
+The exception stores the original `ValidationReport` in `error.report`.
+`context["validation"]` is also included in the standard
+`TaxonormError.to_dict()` output. If the internal parser finds a rare problem
+missed by pre-validation, users still receive `TxInputValidationError`, and
+the original exception is preserved as `__cause__` for logs.
+See [Examples/sample_api_tour.py](Examples/sample_api_tour.py).
 
-Параметр `max_validation_issues` ограничивает размер отчёта автоматической
-проверки. Отключение предусмотрено только для отладки внутренних парсеров:
+`max_validation_issues` limits automatic validation report size. Disabling
+validation is intended only for debugging internal parsers:
 
 ```python
 taxonomy = parse_taxonomy(
@@ -350,13 +363,12 @@ taxonomy = parse_taxonomy(
 )
 ```
 
-При `validate=False` могут возникать низкоуровневые `TxParsingError`,
-`KeyError` и другие исключения. При обработке пользовательских файлов этот
-режим применять не рекомендуется.
+With `validate=False`, low-level `TxParsingError`, `KeyError`, and other
+exceptions may surface. Do not use that mode for user-supplied files.
 
-### Проверка готовой модели
+### Validating an Existing Model
 
-`validate_taxonomy()` выполняет аудит уже созданного объекта:
+`validate_taxonomy()` audits an already-created model:
 
 ```python
 from taxonorm import validate_taxonomy
@@ -365,78 +377,22 @@ report = validate_taxonomy(taxonomy)
 report.raise_for_errors()
 ```
 
-Обычные операции `Taxonomy` уже поддерживают инварианты модели, поэтому эта
-проверка полезна главным образом на границах интеграции и в диагностических
-инструментах. Пустая `Taxonomy` допустима, но создаёт предупреждение
-`taxonomy.empty`.
+Normal `Taxonomy` operations already enforce model invariants, so this check
+is mostly useful at integration boundaries and in diagnostic tools. Empty
+taxonomies are allowed, but produce a `taxonomy.empty` warning.
+See [Examples/sample_api_tour.py](Examples/sample_api_tour.py).
 
-### Просмотр и поиск узлов
+### Tree Traversal and Selection
 
-```python
-len(taxonomy)                         # число узлов
-(2, 14, 24, 34) in taxonomy           # проверка полного пути
-
-node = taxonomy.get_node((2, 14, 24, 34))
-print(node.leaves["en_US"])           # Microphones
-print(node.children)
-```
-
-`get_node()` принимает полный ID-путь. Если путь отсутствует, возникает
-`KeyError`. Передавать одиночную строку вместо пути нельзя: используйте
-`(1,)`, а не `1`.
-
-`TaxonomyNode.leaves`, `TaxonomyNode.children` и `Taxonomy.roots` — доступные
-только для чтения отображения. Это не позволяет обойти проверку ID и ключей:
+`iter_branches()` returns `TaxonomyBranch` objects. Each branch contains a full
+`path` and a read-only `leaves` mapping.
 
 ```python
-node.leaves["en_US"] = "New name"  # TypeError
+for branch in taxonomy.iter_branches():
+    print(branch.path, branch.leaves)
 ```
 
-Изменять модель следует методами `Taxonomy`, описанными ниже.
-
-У `TaxonomyNode` намеренно нет отдельного поля `id`: ID хранится ключом на
-входящем ребре и не дублируется в памяти. Получить ID и расположение узла можно
-из полного `TaxonomyBranch.path` либо из пути, переданного в `get_node()`.
-
-### Визуализация дерева
-
-Модуль `taxonorm.viewer` содержит три способа просмотра дерева. Эти функции
-работают напрямую с `Taxonomy`, без преобразования в `networkx` или другой
-промежуточный граф:
-
-```python
-from taxonorm import (
-    view_live_html_tree,
-    view_live_text_tree,
-    view_text_tree,
-)
-
-view_text_tree(taxonomy)                  # статическое дерево в терминале
-view_text_tree(taxonomy, leaf_key="en_US") # показывать названия вместо ID
-
-view_live_text_tree(taxonomy, leaf_key="en_US")  # интерактивный TUI
-
-html_path = view_live_html_tree(
-    taxonomy,
-    leaf_key="en_US",
-    filename="taxonomy.html",
-)
-```
-
-По умолчанию подписи узлов — это ID. Если передать `leaf_key`, подписью станет
-значение выбранного листа на соответствующем узле. При этом структура остаётся
-родной структурой `Taxonomy`, поэтому одноимённые узлы не схлопываются.
-
-Дополнительно доступны `render_text_tree()` для получения объекта Rich без
-печати и `save_text_tree()` для сохранения текстового дерева в файл.
-
-`leaf_keys()` возвращает ключи листьев в порядке первого появления:
-
-```python
-assert taxonomy.leaf_keys() == ("en_US", "uk_UA")
-```
-
-`leaf_path()` возвращает значения выбранного листа от корня до узла:
+`leaf_path(path, key)` returns selected leaf values from root to node:
 
 ```python
 names = taxonomy.leaf_path(
@@ -446,47 +402,49 @@ names = taxonomy.leaf_path(
 # ("Household appliances", "Large household appliances", "Refrigeration equipment", "Freezers")
 ```
 
-Если требуемого ключа нет у одного из узлов пути, значение задаётся параметром
-`missed_leaf`. По умолчанию используется `"auto"`:
+If the requested key is missing on a node, `missed_leaf` controls the value.
+The default is `"auto"`:
 
 ```python
 names = taxonomy.leaf_path((1, 12), "de_DE")
 # ("<de_DE:1>", "<de_DE:1.12>")
 ```
 
-Можно передать `missed_leaf=None`, чтобы получать `None`, или функцию
-`callable(leaf_key, id_path)`, которая вернёт значение для пропущенного листа.
-
-Для массового просмотра таксономии как путей листьев удобен итератор
-`iter_leaf_paths(key)`. Он возвращает пары `(id_path, leaf_path)` и накапливает
-leaf-путь во время обхода:
-
-```python
-for id_path, leaf_path in taxonomy.iter_leaf_paths("en_US"):
-    print(id_path, leaf_path)
-```
-
-### Обход дерева и выборки
-
-`iter_branches()` возвращает объекты `TaxonomyBranch`. Каждый из них содержит
-полный `path` и доступное только для чтения отображение `leaves`.
+For bulk viewing as ID-path/leaf-path pairs, use `iter_paths(key=None)`. It
+yields `(id_path, leaf_path)` pairs and accumulates the leaf path during one
+traversal. If no key is passed, taxonorm uses the first key from
+`taxonomy.leaf_keys()`.
 
 ```python
 for branch in taxonomy.iter_branches():
-    print(branch.path, branch.leaves)
+    id_path = branch.path
+    leaf_path = taxonomy.leaf_path(branch.path, "en_US")
+    print(id_path, leaf_path)
+
+for id_path, leaf_path in taxonomy.iter_paths():
+    print(id_path, leaf_path)
 ```
 
-Поддерживаются три стабильных порядка обхода:
+The first variant is useful when you need the whole `TaxonomyBranch`: current
+node leaves, filtering by several fields, editing, or debugging the internal
+model. The second variant is better for printing, exporting, and bulk path
+views: the leaf path is accumulated once instead of recomputed from root for
+each node.
+
+See [Examples/sample_iter_paths.py](Examples/sample_iter_paths.py).
+
+Three stable traversal orders are supported:
 
 ```python
-taxonomy.iter_branches("preorder")   # узел, затем его потомки; по умолчанию
-taxonomy.iter_branches("postorder")  # потомки, затем узел
-taxonomy.iter_branches("breadth")    # по уровням, начиная с корней
+taxonomy.iter_branches("preorder")   # node, then descendants; default
+taxonomy.iter_branches("postorder")  # descendants, then node
+taxonomy.iter_branches("breadth")    # level order from roots
+taxonomy.iter_paths("en_US", order="breadth")
 ```
 
-Неизвестное имя порядка вызывает `ValueError`.
+Unknown order names raise `ValueError`.
 
-Для выборки используется `find_branches()`:
+Use `find_branches()` for lazy selection:
 
 ```python
 groups = taxonomy.find_branches(
@@ -498,35 +456,45 @@ for branch in groups:
     print(branch.path)
 ```
 
-Метод возвращает ленивый итератор и не создаёт отдельную копию таксономии.
+The method returns a lazy iterator and does not create a separate taxonomy
+copy.
 
-### Добавление узлов
-
-`add_branch()` создаёт узел и отсутствующих предков:
-
-```python
-taxonomy.add_branch(
-    (2, 14, 24, 39),
-    {"en_US": "Studio monitors", "uk_UA": "Студійні монітори"},
-)
-```
-
-Если точный путь уже объявлен, возникает `TxValidationError`. Для полной
-замены словаря листьев существующего узла требуется явный `replace=True`:
+### Node Lookup
 
 ```python
-taxonomy.add_branch(
-    (2, 14, 24, 39),
-    {"en_US": "Studio monitors", "uk_UA": "Студійні монітори"},
-    replace=True,
-)
+len(taxonomy)                         # number of nodes
+(2, 14, 24, 34) in taxonomy           # full-path membership
+
+node = taxonomy.get_node((2, 14, 24, 34))
+print(node.leaves["en_US"])           # Microphones
+print(node.children)
 ```
 
-Замена листьев не удаляет дочерние узлы.
+`get_node()` accepts a full ID path. Missing paths raise `KeyError`. Do not
+pass a single scalar instead of a path: use `(1,)`, not `1`.
 
-### Изменение листьев
+`leaf_keys()` returns leaf keys in first-seen order:
 
-`update_leaves()` по умолчанию объединяет переданные листья с существующими:
+```python
+assert taxonomy.leaf_keys() == ("en_US", "uk_UA")
+```
+
+`TaxonomyNode.leaves`, `TaxonomyNode.children`, and `Taxonomy.roots` are
+read-only mappings. This prevents bypassing ID and key validation:
+
+```python
+node.leaves["en_US"] = "New name"  # TypeError
+```
+
+Change the model through `Taxonomy` methods.
+
+`TaxonomyNode` intentionally has no separate `id` field: the ID is stored as
+the incoming edge key and is not duplicated in the node. Get a node's ID and
+location from `TaxonomyBranch.path` or from the path passed to `get_node()`.
+
+### Updating Leaves
+
+`update_leaves()` merges new leaves into existing leaves by default:
 
 ```python
 taxonomy.update_leaves(
@@ -535,8 +503,8 @@ taxonomy.update_leaves(
 )
 ```
 
-Одинаковые ключи получают новые значения, остальные сохраняются. Для полной
-замены словаря используйте `replace=True`:
+Duplicate keys get new values, while other leaves remain. Use `replace=True`
+to replace the whole leaves mapping:
 
 ```python
 taxonomy.update_leaves(
@@ -546,13 +514,13 @@ taxonomy.update_leaves(
 )
 ```
 
-Если путь отсутствует, `update_leaves()` вызывает `KeyError`. Некорректный
-ключ листа вызывает `TxValidationError`; модель при этом не изменяется.
+Missing paths raise `KeyError`. Invalid leaf keys raise `TxValidationError`,
+and the model is not changed.
 
-### Переименование ID
+### Renaming IDs
 
-`rename_node()` изменяет последний ID пути, сохраняя поддерево и позицию среди
-соседей:
+`rename_node()` changes the last ID in a path while preserving the subtree and
+sibling position:
 
 ```python
 taxonomy.rename_node(
@@ -561,48 +529,14 @@ taxonomy.rename_node(
 )
 ```
 
-Все пути потомков автоматически изменяются. Если у того же родителя уже есть
-узел с новым ID, возникает `TxValidationError`; существующий узел не
-перезаписывается.
+All descendant paths are updated automatically. If the same parent already has
+a child with the new ID, `TxValidationError` is raised and the existing node is
+not overwritten.
 
-### Перемещение поддерева
+### ID Renumbering
 
-`move_subtree()` переносит узел вместе со всеми потомками:
-
-```python
-taxonomy.move_subtree(
-    (3, 15, 26, 37),
-    (3, 15, 25),
-)
-```
-
-Одновременно можно изменить ID корня переносимого поддерева:
-
-```python
-taxonomy.move_subtree(
-    (3, 15, 26, 37),
-    (3, 15, 25),
-    new_id=370,
-)
-```
-
-Чтобы сделать узел новым корнем, передайте `new_parent=None`.
-
-Операция проверяет ограничения до изменения дерева:
-
-- нельзя переместить узел внутрь собственного поддерева;
-- у нового родителя не должно быть дочернего узла с целевым ID;
-- новый родитель должен существовать;
-- новый ID должен быть непустым и хэшируемым.
-
-При нарушении первых двух правил возникает `TxValidationError`, при отсутствии
-исходного пути или нового родителя — `KeyError`. Если источник и назначение
-совпадают, операция ничего не меняет и возвращает существующий узел.
-
-### Перенумерация ID
-
-`renumber_taxonomy_ids()` создаёт новую `Taxonomy` с теми же листьями,
-структурой и порядком соседних узлов, но с заново назначенными числовыми ID:
+`renumber_taxonomy_ids()` creates a new `Taxonomy` with the same leaves,
+structure, and sibling order, but with freshly assigned numeric IDs:
 
 ```python
 from taxonorm import renumber_taxonomy_ids
@@ -615,25 +549,49 @@ renumbered = renumber_taxonomy_ids(
 )
 ```
 
-Функция полезна, когда исходные ID отсутствуют, неудобны или не являются
-глобально уникальными. Новые ID назначаются по уровням дерева с округлёнными
-диапазонами, как при импорте LP-таксономии без собственных ID. Исходная модель
-не изменяется.
+Use it when source IDs are absent, inconvenient, non-unique, or follow an old
+scheme. New IDs are assigned by tree level using rounded ranges, as when
+importing an LP taxonomy without own IDs. The original model is not modified.
 
-Пример нескольких операций модели на sample-таксономии см.
-[Examples/sample_model_ops.py](Examples/sample_model_ops.py).
+Several model operations are shown in
+[Examples/sample_model_ops.py](Examples/sample_model_ops.py). Renumbering is
+also shown in [Examples/sample_api_tour.py](Examples/sample_api_tour.py).
 
-### Удаление узлов
+### Adding Nodes
 
-По умолчанию `remove_branch()` удаляет только узел без потомков:
+`add_branch()` creates a node and any missing ancestors:
+
+```python
+taxonomy.add_branch(
+    (2, 14, 24, 39),
+    {"en_US": "Studio monitors", "uk_UA": "Студійні монітори"},
+)
+```
+
+An exact duplicate path raises `TxValidationError`. To fully replace the
+leaves mapping of an existing node, pass `replace=True` explicitly:
+
+```python
+taxonomy.add_branch(
+    (2, 14, 24, 39),
+    {"en_US": "Studio monitors", "uk_UA": "Студійні монітори"},
+    replace=True,
+)
+```
+
+Replacing leaves does not remove child nodes.
+
+### Removing Nodes
+
+By default, `remove_branch()` removes only a node without descendants:
 
 ```python
 taxonomy.remove_branch((2, 14, 24, 34))
 ```
 
-Попытка удалить узел с дочерними узлами вызывает `TxValidationError`. Это
-защищает от случайной потери целого раздела. Для намеренного удаления всего
-поддерева необходимо явно указать `recursive=True`:
+Trying to remove a node with children raises `TxValidationError`. This protects
+against accidental deletion of whole sections. To remove a full subtree,
+explicitly pass `recursive=True`:
 
 ```python
 taxonomy.remove_branch(
@@ -642,14 +600,79 @@ taxonomy.remove_branch(
 )
 ```
 
-Метод возвращает отсоединённый `TaxonomyNode`. Число узлов `len(taxonomy)`
-уменьшается на размер удалённого поддерева. Повторное удаление того же пути
-вызывает `KeyError`.
+The method returns the detached `TaxonomyNode`. `len(taxonomy)` decreases by
+the size of the removed subtree. Removing the same path again raises
+`KeyError`.
 
-### Сериализация и запись
+### Moving Subtrees
 
-`serialize_taxonomy()` преобразует модель в таблицу выбранного стиля, не
-создавая файл:
+`move_subtree()` moves a node together with all descendants:
+
+```python
+taxonomy.move_subtree(
+    (3, 15, 26, 37),
+    (3, 15, 25),
+)
+```
+
+You may also rename the root of the moved subtree:
+
+```python
+taxonomy.move_subtree(
+    (3, 15, 26, 37),
+    (3, 15, 25),
+    new_id=370,
+)
+```
+
+To make a node a new root, pass `new_parent=None`.
+
+The operation checks constraints before changing the tree:
+
+- a node cannot be moved inside its own subtree;
+- the new parent must not already have a child with the target ID;
+- the new parent must exist;
+- the new ID must be non-empty and hashable.
+
+The first two rule violations raise `TxValidationError`; missing source or
+destination paths raise `KeyError`. If source and destination are the same,
+the operation does nothing and returns the existing node.
+
+### Tree Visualization
+
+`taxonorm.viewer` provides three tree viewers. They work directly with
+`Taxonomy`, without converting to `networkx` or another intermediate graph:
+
+```python
+from taxonorm import (
+    view_live_html_tree,
+    view_live_text_tree,
+    view_text_tree,
+)
+
+view_text_tree(taxonomy)                   # static terminal tree
+view_text_tree(taxonomy, leaf_key="en_US") # display names instead of IDs
+
+view_live_text_tree(taxonomy, leaf_key="en_US")  # interactive TUI
+
+html_path = view_live_html_tree(
+    taxonomy,
+    leaf_key="en_US",
+    filename="taxonomy.html",
+)
+```
+
+By default, node labels are IDs. Pass `leaf_key` to label each node with the
+selected leaf value. The underlying structure remains the native `Taxonomy`
+tree, so equal labels do not collapse distinct nodes.
+
+`render_text_tree()` returns a Rich tree without printing it. `save_text_tree()`
+saves a text tree to a file.
+
+### Serialization and Export
+
+`serialize_taxonomy()` converts a model to a table in a selected style without
+creating a file:
 
 ```python
 from taxonorm import IpStyle, serialize_taxonomy
@@ -662,8 +685,8 @@ rows = serialize_taxonomy(
 )
 ```
 
-`export_taxonomy()` сериализует и записывает CSV, XLS или XLSX; формат файла
-определяется расширением:
+`export_taxonomy()` serializes and writes CSV, XLS, or XLSX. The file extension
+selects the file format:
 
 ```python
 from taxonorm import LpStyle, export_taxonomy
@@ -677,35 +700,35 @@ export_taxonomy(
 )
 ```
 
-Запускаемый пример экспорта без записи в рабочую папку проекта находится в
-[Examples/sample_export.py](Examples/sample_export.py).
+See [Examples/sample_export.py](Examples/sample_export.py) for an export
+example that does not write into the project working directory.
+`serialize_taxonomy()` without file output is shown in
+[Examples/sample_api_tour.py](Examples/sample_api_tour.py).
 
-Для IP-стиля `key_order` задаёт порядок столбцов листьев. Для LP-стиля
-`leaf_key` выбирает единственный лист, образующий leaf-путь. Аргумент
-`missed_leaf` управляет значением отсутствующего листа: `None`, функция либо
-строка `"auto"`.
+For IP styles, `key_order` controls leaf column order. For LP styles,
+`leaf_key` selects the single leaf that forms the leaf path. `missed_leaf`
+controls missing leaf values: `None`, a callable, or `"auto"`.
 
-Значения листьев в памяти могут быть любыми Python-объектами, но конкретный
-файловый формат способен сохранить только поддерживаемые табличным драйвером
-типы. Для сложных объектов пользователь должен заранее определить собственное
-преобразование.
+In-memory leaf values may be any Python objects, but a concrete file format can
+only store types supported by the table driver. Convert complex objects before
+exporting them.
 
-### Равенство и порядок
+### Equality and Order
 
-Два объекта `Taxonomy` равны, если совпадают их ветви, листья и стабильный
-порядок обхода:
+Two `Taxonomy` objects are equal when their branches, leaves, and stable
+traversal order match:
 
 ```python
 assert Taxonomy.from_branches(taxonomy.to_branches()) == taxonomy
 ```
 
-Порядок является частью наблюдаемого результата сериализации. Если входные
-данные семантически одинаковы, но добавлены в разном порядке, объекты могут
-сравниваться как неравные.
+Order is part of the observable serialization result. If input data are
+semantically equal but inserted in a different order, the models may compare as
+different. See [Examples/sample_api_tour.py](Examples/sample_api_tour.py).
 
-### Исключения
+### Exceptions
 
-Основные исключения определены в `taxonorm.errors`:
+Core exceptions are defined in `taxonorm.errors`:
 
 ```python
 from taxonorm.errors import (
@@ -719,32 +742,32 @@ from taxonorm.errors import (
 )
 ```
 
-Все специализированные исключения наследуют `TaxonormError`, содержат
-стабильный `code`, текст `message`, необязательный `context` и метод
-`to_dict()`. Для обработки всех ошибок библиотеки можно перехватывать базовый
-`TaxonormError`; для ошибок пользовательских ID, ключей и операций дерева —
-`TxValidationError`, а для некорректной внешней таблицы — более точный
-`TxInputValidationError`.
+All specialized exceptions inherit from `TaxonormError` and provide a stable
+`code`, a text `message`, optional `context`, and `to_dict()`. To handle all
+library errors, catch `TaxonormError`. For user ID, key, and tree-operation
+errors, catch `TxValidationError`. For invalid external tables, catch the more
+specific `TxInputValidationError`.
+See [Examples/sample_api_tour.py](Examples/sample_api_tour.py).
 
-### Краткий справочник методов `Taxonomy`
+### `Taxonomy` Method Reference
 
-| Метод | Назначение | Основные ошибки |
+| Method | Purpose | Main errors |
 | --- | --- | --- |
-| `Taxonomy()` | Создать пустую модель | — |
-| `from_branches(rows)` | Создать модель из полных ID-ветвей | `TxValidationError` |
-| `to_branches()` | Получить поверхностно скопированную таблицу ветвей | — |
-| `get_node(path)` | Получить узел по полному пути | `KeyError` |
-| `add_branch(path, leaves, replace=False)` | Добавить узел и недостающих предков | `TxValidationError` |
-| `update_leaves(path, leaves, replace=False)` | Объединить или заменить листья | `KeyError`, `TxValidationError` |
-| `rename_node(path, new_id)` | Переименовать ID с сохранением поддерева | `KeyError`, `TxValidationError` |
-| `move_subtree(path, new_parent, new_id=None)` | Переместить и при необходимости переименовать поддерево | `KeyError`, `TxValidationError` |
-| `remove_branch(path, recursive=False)` | Удалить узел либо всё поддерево | `KeyError`, `TxValidationError` |
-| `iter_branches(order="preorder")` | Обойти дерево в выбранном порядке | `ValueError` |
-| `find_branches(predicate, order="preorder")` | Лениво выбрать ветви по предикату | `ValueError` |
-| `leaf_keys()` | Получить ключи в порядке первого появления | — |
-| `leaf_path(path, key, missed_leaf="auto")` | Получить значения листа от корня до узла | `KeyError`, `TxValidationError` |
-| `iter_leaf_paths(key, order="preorder", missed_leaf="auto")` | Обойти пары `(id_path, leaf_path)` | `ValueError`, `TxValidationError` |
+| `Taxonomy()` | Create an empty model | - |
+| `from_branches(rows)` | Create a model from full ID branches | `TxValidationError` |
+| `to_branches()` | Return a shallow-copied branch table | - |
+| `get_node(path)` | Get a node by full path | `KeyError` |
+| `add_branch(path, leaves, replace=False)` | Add a node and missing ancestors | `TxValidationError` |
+| `update_leaves(path, leaves, replace=False)` | Merge or replace leaves | `KeyError`, `TxValidationError` |
+| `rename_node(path, new_id)` | Rename an ID while preserving the subtree | `KeyError`, `TxValidationError` |
+| `move_subtree(path, new_parent, new_id=None)` | Move and optionally rename a subtree | `KeyError`, `TxValidationError` |
+| `remove_branch(path, recursive=False)` | Remove a node or a subtree | `KeyError`, `TxValidationError` |
+| `iter_branches(order="preorder")` | Traverse the tree in a selected order | `ValueError` |
+| `find_branches(predicate, order="preorder")` | Lazily select branches | `ValueError` |
+| `leaf_keys()` | Return leaf keys in first-seen order | - |
+| `leaf_path(path, key, missed_leaf="auto")` | Return leaf values from root to node | `KeyError`, `TxValidationError` |
+| `iter_paths(key=None, order="preorder", missed_leaf="auto")` | Traverse `(id_path, leaf_path)` pairs | `ValueError`, `TxValidationError` |
+| `iter_leaf_paths(key, order="preorder", missed_leaf="auto")` | Compatibility alias for `iter_paths(key, ...)` | `ValueError`, `TxValidationError` |
 
-Связанные функции верхнеуровневого API: `renumber_taxonomy_ids(taxonomy)`,
+Related top-level functions: `renumber_taxonomy_ids(taxonomy)` and
 `restore_unique_ip_chunks(chunks)`.
-

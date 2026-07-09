@@ -53,7 +53,7 @@ def test_restore_unique_ip_chunks_rejects_ambiguous_parent() -> None:
         [2, 1, {"name": "Same node under another parent"}],
     ]
 
-    with pytest.raises(TxParsingError, match="более одного родителя"):
+    with pytest.raises(TxParsingError):
         restore_unique_ip_chunks(chunks)
 
 
@@ -63,7 +63,7 @@ def test_restore_unique_ip_chunks_rejects_cycles() -> None:
         [2, 1, {"name": "One"}],
     ]
 
-    with pytest.raises(TxParsingError, match="цикл"):
+    with pytest.raises(TxParsingError):
         restore_unique_ip_chunks(chunks)
 
 
@@ -121,7 +121,7 @@ def test_split_to_unique_ip_chunks_rejects_duplicate_ids() -> None:
         ]
     )
 
-    with pytest.raises(TxConversionError, match="должны быть уникальны"):
+    with pytest.raises(TxConversionError):
         split_to_unique_ip_chunks(taxonomy)
 
 

@@ -53,9 +53,9 @@ class TaxonormError(Exception):
         self.message = message
         self.context = context or {}
 
-        # Кортеж:
-        #   location[0] — вызывающая функция выше
-        #   location[1] — функция, где создано исключение
+        # Tuple:
+        #   location[0] - caller above the error site
+        #   location[1] - function where the exception was created
         self.location: tuple[str | None, str | None] | None = None
 
         if capture_location:
@@ -65,8 +65,8 @@ class TaxonormError(Exception):
         try:
             # 0 = _capture_location
             # 1 = __init__
-            # 2 = место создания исключения: raise ParsingError(...)
-            # 3 = функция выше
+            # 2 = exception creation site: raise ParsingError(...)
+            # 3 = caller above it
             error_frame = sys._getframe(2)
             caller_frame = error_frame.f_back
 

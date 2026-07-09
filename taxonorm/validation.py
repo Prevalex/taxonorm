@@ -1,63 +1,44 @@
 from typing import Any, TypeGuard
 from collections.abc import Hashable
 
-from alib.introspection import repr_type
-from alib.tables import is_empty_llist
-from alib.validation import is_empty
+from ._introspection import repr_type
+from ._tables import is_empty_llist
+from ._validation import is_empty
 
 from .errors import TxValidationError
 
 def validate_leaf_keys(leaf_keys):
-    """
-    Проверяет корректность ключей листьев. Если обнаружено нарушение, то генерирует исключение.
-    Для удобства отладки - в сообщении исключения фигурирует имя функции, вызвавшей данную
-    проверочную функцию.
-    Parameters
-    ----------
-    leaf_keys
-
-    Returns
-    -------
-    None
-    """
+    """Validate leaf keys and raise ``TxValidationError`` on failure."""
     if isinstance(leaf_keys, (list, tuple)):
         if leaf_keys:
             for key in leaf_keys:
                 if is_valid_keyid(key):
                     continue
                 else:
-                    raise TxValidationError(f'Ключ листа {repr(key)} не соответствует требованиям к '
-                                          f'ключам: hashable; not empty; not None')
+                    raise TxValidationError(
+                        f"Leaf key {key!r} does not satisfy key requirements: "
+                        "hashable; not empty; not None"
+                    )
             else:
                 return
         else:
-            raise TxValidationError('Список ключей листьев - пуст.')
+            raise TxValidationError("Leaf key list is empty.")
     else:
-        raise TxValidationError(f'Параметр leaf_keys должен быть списком или кортежем. '
-                              f'Получено {type(leaf_keys)}:{repr(leaf_keys)}')
+        raise TxValidationError(
+            "leaf_keys must be a list or tuple. "
+            f"Got {type(leaf_keys)}:{leaf_keys!r}"
+        )
 
 
 def validated_leaf_keys(leaf_keys) -> list[Hashable]:
-    """
-    Проверяет корректность ключей листьев. Если обнаружено нарушение, то генерирует исключение.
-    Для удобства отладки - в сообщении исключения фигурирует имя функции, вызвавшей данную
-    проверочную функцию.
-    Если все Ок - возвращает копию списка или кортежа листьев, полученного на входе
-    Parameters
-    ----------
-    leaf_keys
-
-    Returns
-    -------
-    list of leaf_keys
-    """
+    """Validate leaf keys and return a de-duplicated list preserving order."""
     validate_leaf_keys(leaf_keys)
-    return list(dict.fromkeys(leaf_keys))  # (GPT4)- c дедупликацией ключей и сохранением порядка (python > 3.7)
+    return list(dict.fromkeys(leaf_keys))
 
 
 def validate_branch_list(branch_list):
     if is_empty_llist(branch_list):
-        raise TxValidationError('Список веток (branch_list) содержит пустые объекты или пуст.')
+        raise TxValidationError("branch_list is empty or contains empty objects.")
 
 
 def validated_branch_list(branch_list):
@@ -70,8 +51,9 @@ def validate_style_attribs(**attribs):
         if isinstance(_value, (bool, type(None))):
             continue
         else:
-            raise TxValidationError(f'Триггер {_name} может иметь тип bool или быть None. '
-                                  f'Получено: {_name}={repr(_value)}')
+            raise TxValidationError(
+                f"Style flag {_name} must be bool or None. Got: {_name}={_value!r}"
+            )
 
 def validated_list_like(list_like: list[Any] | tuple[Any, ...] | None) -> list[Any]:
     """
@@ -97,9 +79,7 @@ def is_valid_keyid(id_key: object, allow_empty: bool = False) -> TypeGuard[Hasha
 def validated_header_titles(
     titles: list[Hashable] | tuple[Hashable, ...] | None,
 ) -> list[Hashable]:
-    # Проверяем titles и приводим к list. А именно: tuple преобразуем в list, None преобразуем в пустой список.
     titles = validated_list_like(titles)  # (tuple -> list, None -> [], Any other -> exception )
-    # Если заголовок задан списком - проверяем элементы списка на хэшируемость, разрешаем пустые
     for title in titles:
         if not is_valid_keyid(title, allow_empty=True):
             raise TxValidationError(

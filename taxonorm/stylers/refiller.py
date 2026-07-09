@@ -1,7 +1,7 @@
 from __future__ import annotations
 from typing import Any
 
-from alib.sequences import is_empty_list
+from taxonorm._sequences import is_empty_list
 from taxonorm.validation import validated_branch_list, validate_style_attribs
 
 
@@ -29,27 +29,26 @@ def lp_sparse_to_dense(branch_list: list[list[Any]],
         header_idx = -1
 
     stamp = [None]
-    dense_table = list()  # в dense_table восстанавливаем lp таксономию из lp sparse таксономии
+    dense_table = list()
 
     for idx, branch in enumerate(branch_list):
-        # Пропускаем заголовок и пустые ветки
         if idx == header_idx or is_empty_list(branch):
             continue
 
         if ids:
-            _id_ = branch[0]  # id просто переносим
+            _id_ = branch[0]
             carrier = branch[1:]
         else:
             carrier = branch[:]
 
         stamp = _resize_stamp(stamp, carrier)
 
-        for index, leaf_value in enumerate(carrier):  # лист за листом
+        for index, leaf_value in enumerate(carrier):
             if leaf_value is None:
                 pass
             else:
-                stamp[index] = leaf_value  # переносим категорию
-                stamp = stamp[:index + 1] + [None] * len(stamp[index + 1:])  # и проставляем None в ячейки справа от нее
+                stamp[index] = leaf_value
+                stamp = stamp[:index + 1] + [None] * len(stamp[index + 1:])
                 break
 
         if ids:
@@ -57,4 +56,4 @@ def lp_sparse_to_dense(branch_list: list[list[Any]],
         else:
             dense_table.append(stamp)
 
-    return dense_table # мы восстановили обычный lp формат и у нас уже есть функция конвертации ее в таксономию
+    return dense_table

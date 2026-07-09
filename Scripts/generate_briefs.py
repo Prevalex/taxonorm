@@ -1,7 +1,7 @@
 #!python
 from pathlib import Path
+import json
 
-from alib.files import save_pydata_to_json_file
 from colorama import Fore, just_fix_windows_console
 from taxonorm.utils import get_style_from_hints
 from taxonorm import import_taxonomy, export_taxonomy
@@ -43,6 +43,13 @@ def cvt(v):
             return str(v)
 
 cvt_dict = {'*':cvt}
+
+
+def save_pydata_to_json_file(data, filename):
+    Path(filename).write_text(
+        json.dumps(data, ensure_ascii=False, indent=4),
+        encoding="utf-8",
+    )
 
 for header in 'H', 'NH':
     for keys in 'K', 'NK':

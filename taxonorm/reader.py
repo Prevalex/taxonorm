@@ -4,9 +4,9 @@
 from typing import Any, Callable
 from pathlib import Path
 
-from alib.tables import read_llist_from_file, is_llist, is_completed_llist
-from alib.introspection import inspect_location
-from alib.console import wrn
+from taxonorm._tables import read_llist_from_file, is_llist, is_completed_llist
+from taxonorm._introspection import inspect_location
+from taxonorm._console import wrn
 
 from taxonorm.common import tStyler, R_CODEPAGE, DEFAULT_LEAF_KEY
 from taxonorm.errors import TxImportError, TxInputValidationError, TxValidationError
@@ -49,7 +49,7 @@ def import_taxonomy(source: str | Path | list[list[Any]], *,
                     code="leaf_keys.invalid",
                     message=str(error),
                     value=leaf_keys,
-                    expected="непустой список непустых хэшируемых ключей",
+                    expected="a non-empty list of non-empty hashable keys",
                 ),
             ),
         )
@@ -67,24 +67,27 @@ def import_taxonomy(source: str | Path | list[list[Any]], *,
         taxonomy_data = source
 
     else:
-        raise TxImportError(f'Импортируемая таксономия не является файлом или списком списков. Или список '
-                          f'содержит пустые подсписки (ветви). {type(source)=}')
+        raise TxImportError(
+            "Imported taxonomy must be a file path or a list of rows. "
+            f"The row list must not contain empty branch rows. {type(source)=}"
+        )
 
     if is_completed_llist(taxonomy_data):
         taxonomy_data = trim_string_cells(taxonomy_data)
-        # Если styler не задан, делать нечего - вызываем сниффер
         if styler is None:
             styler = guess_style(taxonomy_data, leaf_keys=leaf_keys)
-            wrn(f'{inspect_location()}: Стиль формата таксономии не задан (styler=None).'
-                f' Для парсинга таксономии будет использован стиль {styler}.')
+            wrn(
+                f"{inspect_location()}: taxonomy style is not specified "
+                f"(styler=None). Guessed style {styler} will be used."
+            )
 
-        taxonomy_data = parse_taxonomy(taxonomy_data, leaf_keys=leaf_keys,
-                                       styler=styler,
-                                       sort_cvt=sort_cvt,
-                                       restore_ip_chunks=restore_ip_chunks,
-                                       validate=validate,
-                                       max_validation_issues=max_validation_issues,
-                                       validation_source=str(source) if isinstance(source, (str, Path)) else None)  # eol уже обработан
-        return taxonomy_data
+        parsed_taxonomy = parse_taxonomy(taxonomy_data, leaf_keys=leaf_keys,
+                                         styler=styler,
+                                         sort_cvt=sort_cvt,
+                                         restore_ip_chunks=restore_ip_chunks,
+                                         validate=validate,
+                                         max_validation_issues=max_validation_issues,
+                                         validation_source=str(source) if isinstance(source, (str, Path)) else None)
+        return parsed_taxonomy
     else:
-        raise TxImportError('Полученные данные не содержат таксономию.')
+        raise TxImportError("Read data does not contain a taxonomy.")

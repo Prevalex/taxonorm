@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from alib.tables import read_llist_from_file
+from taxonorm._tables import read_llist_from_file
 
 from taxonorm import Taxonomy, export_taxonomy, import_taxonomy, serialize_taxonomy
 from taxonorm.common import IpStyle, LpStyle

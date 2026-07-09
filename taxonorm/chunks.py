@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Hashable, Mapping, Sequence
 from typing import Any
 
-from alib.validation import is_valid_keyid
+from taxonorm._validation import is_valid_keyid
 
 from taxonorm.errors import TxConversionError, TxParsingError
 from taxonorm.model import Taxonomy
@@ -13,24 +13,24 @@ from taxonorm.model import Taxonomy
 
 def _validate_chunk(chunk: Sequence[Any], row_index: int) -> tuple[tuple[Hashable, ...], dict[Hashable, Any]]:
     if len(chunk) < 2:
-        raise TxParsingError(f"IP-обрезок #{row_index} слишком короткий: {chunk!r}")
+        raise TxParsingError(f"IP chunk #{row_index} is too short: {chunk!r}")
     if not isinstance(chunk[-1], Mapping):
         raise TxParsingError(
-            f"Последний элемент IP-обрезка #{row_index} должен быть словарём листьев"
+            f"The last item of IP chunk #{row_index} must be a leaves mapping"
         )
 
     ids: list[Hashable] = []
     for column, node_id in enumerate(chunk[:-1], start=1):
         if not is_valid_keyid(node_id):
             raise TxParsingError(
-                f"ID {node_id!r} в IP-обрезке #{row_index}, столбец {column} "
-                "не соответствует требованиям к ID"
+                f"ID {node_id!r} in IP chunk #{row_index}, column {column}, "
+                "does not satisfy ID requirements"
             )
         ids.append(node_id)
 
     if len(ids) != len(set(ids)):
         raise TxParsingError(
-            f"IP-обрезок #{row_index} содержит повторяющийся ID: {chunk!r}"
+            f"IP chunk #{row_index} contains a repeated ID: {chunk!r}"
         )
 
     return tuple(ids), dict(chunk[-1])
@@ -48,7 +48,7 @@ def _resolve_path(
         parent = parent_by_id[current]
         if parent in seen:
             raise TxParsingError(
-                f"В IP-обрезках обнаружен цикл: {parent!r} уже встречался в пути {path!r}"
+                f"IP chunks contain a cycle: {parent!r} already appeared in path {path!r}"
             )
         path.append(parent)
         seen.add(parent)
@@ -77,8 +77,8 @@ def restore_unique_ip_chunks(chunks: Sequence[Sequence[Any]]) -> list[list[Any]]
             previous_parent = parent_by_id.get(child)
             if previous_parent is not None and previous_parent != parent:
                 raise TxParsingError(
-                    f"ID {child!r} имеет более одного родителя: "
-                    f"{previous_parent!r} и {parent!r}"
+                    f"ID {child!r} has more than one parent: "
+                    f"{previous_parent!r} and {parent!r}"
                 )
             parent_by_id[child] = parent
 
@@ -86,7 +86,7 @@ def restore_unique_ip_chunks(chunks: Sequence[Sequence[Any]]) -> list[list[Any]]
         if terminal_id in leaves_by_terminal_id:
             if leaves_by_terminal_id[terminal_id] != leaves:
                 raise TxParsingError(
-                    f"ID {terminal_id!r} описан несколькими наборами листьев"
+                    f"ID {terminal_id!r} is described by multiple leaves mappings"
                 )
             continue
 
@@ -108,11 +108,11 @@ def restore_unique_ip_chunks(chunks: Sequence[Sequence[Any]]) -> list[list[Any]]
 def _validate_max_chunk_len(max_chunk_len: int) -> int:
     if isinstance(max_chunk_len, bool) or not isinstance(max_chunk_len, int):
         raise TxConversionError(
-            f"max_chunk_len должен быть целым числом не меньше 2. Получено: {max_chunk_len!r}"
+            f"max_chunk_len must be an integer not less than 2. Got: {max_chunk_len!r}"
         )
     if max_chunk_len < 2:
         raise TxConversionError(
-            f"max_chunk_len должен быть не меньше 2. Получено: {max_chunk_len!r}"
+            f"max_chunk_len must be not less than 2. Got: {max_chunk_len!r}"
         )
     return max_chunk_len
 
@@ -124,8 +124,8 @@ def _assert_unique_taxonomy_ids(taxonomy: Taxonomy) -> None:
         previous_path = seen.get(node_id)
         if previous_path is not None:
             raise TxConversionError(
-                f"ID таксономии должны быть уникальны для дробления на IP-обрезки: "
-                f"{node_id!r} встречается в путях {previous_path!r} и {branch.path!r}"
+                f"Taxonomy IDs must be unique to split into IP chunks: "
+                f"{node_id!r} appears in paths {previous_path!r} and {branch.path!r}"
             )
         seen[node_id] = branch.path
 
@@ -143,7 +143,7 @@ def split_to_unique_ip_chunks(
     """
     if not isinstance(taxonomy, Taxonomy):
         raise TxConversionError(
-            f"Ожидался объект Taxonomy, получено: {type(taxonomy).__name__}"
+            f"Expected a Taxonomy object, got: {type(taxonomy).__name__}"
         )
     max_chunk_len = _validate_max_chunk_len(max_chunk_len)
     _assert_unique_taxonomy_ids(taxonomy)

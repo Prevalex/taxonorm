@@ -17,7 +17,7 @@ LabelFormatter = Callable[[IdPath, TaxonomyNode, str], str]
 def _ensure_taxonomy(taxonomy: Taxonomy) -> None:
     if not isinstance(taxonomy, Taxonomy):
         raise TxValidationError(
-            f"Ожидался объект Taxonomy, получено: {type(taxonomy).__name__}"
+            f"Expected a Taxonomy object, got: {type(taxonomy).__name__}"
         )
 
 
@@ -74,7 +74,7 @@ def render_text_tree(
         from rich.tree import Tree as RichTree
     except ImportError as exc:  # pragma: no cover - depends on environment
         raise RuntimeError(
-            'Для view_text_tree() установите зависимость "rich".'
+            'Install the "rich" dependency to use view_text_tree().'
         ) from exc
 
     tree = RichTree(label)
@@ -116,7 +116,7 @@ def view_text_tree(
         from rich.console import Console as RichConsole
     except ImportError as exc:  # pragma: no cover - depends on environment
         raise RuntimeError(
-            'Для view_text_tree() установите зависимость "rich".'
+            'Install the "rich" dependency to use view_text_tree().'
         ) from exc
 
     tree = render_text_tree(
@@ -147,7 +147,7 @@ def save_text_tree(
         from rich.console import Console as RichConsole
     except ImportError as exc:  # pragma: no cover - depends on environment
         raise RuntimeError(
-            'Для save_text_tree() установите зависимость "rich".'
+            'Install the "rich" dependency to use save_text_tree().'
         ) from exc
 
     path = Path(filename)
@@ -183,7 +183,7 @@ def view_live_text_tree(
         from textual.widgets.tree import TreeNode
     except ImportError as exc:  # pragma: no cover - depends on environment
         raise RuntimeError(
-            'Для view_live_text_tree() установите зависимость "textual".'
+            'Install the "textual" dependency to use view_live_text_tree().'
         ) from exc
 
     class TaxonomyTree(Tree[Any]):
@@ -191,7 +191,7 @@ def view_live_text_tree(
         ICON_NODE_EXPANDED = icon_node_expanded
 
     class TaxonomyTreeApp(App[None]):
-        BINDINGS = [("q", "quit", "Выйти")]
+        BINDINGS = [("q", "quit", "Quit")]
         CSS_PATH = None
 
         def compose(self) -> ComposeResult:
@@ -267,7 +267,7 @@ def view_live_html_tree(
         from pyvis.network import Network
     except ImportError as exc:  # pragma: no cover - depends on environment
         raise RuntimeError(
-            'Для view_live_html_tree() установите зависимость "pyvis".'
+            'Install the "pyvis" dependency to use view_live_html_tree().'
         ) from exc
 
     if filename is None:
