@@ -19,6 +19,7 @@ from .viewer import (
 )
 from .common import IpStyle, LpStyle
 from .chunks import restore_unique_ip_chunks, split_to_unique_ip_chunks
+from .adapters import to_bigtree, to_networkx
 from .errors import TxInputValidationError
 from .stylers.style_lp_ni import renumber_taxonomy_ids
 from .input_validation import (
@@ -40,6 +41,8 @@ __all__ = [
     "renumber_taxonomy_ids",
     "restore_unique_ip_chunks",
     "split_to_unique_ip_chunks",
+    "to_bigtree",
+    "to_networkx",
     "validate_input",
     "validate_taxonomy",
     "parse_taxonomy",

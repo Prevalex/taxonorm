@@ -1,174 +1,316 @@
-## Представление
+# taxonorm Concepts
 
-Под таксономией мы будем понимать иерархическую структуру, которую можно представить себе в виде куста ветвей, исходящих из одного корня. На каждой ветви есть узлы, несущие информацию и/или порождающие ответвления. Каждому узлу соответствует его идентификатор.
+This document introduces the conceptual model and terminology used by
+`taxonorm`.  It is meant to be read before the README when the style names
+(`IP`, `LP`, `sparse`, `tabbed`, `chunks`) are still unfamiliar.
 
-Информация узла хранится в листьях узла. Листья привязаны к узлам. Узлы могут иметь любое число листьев или не иметь вообще. 
+The original Russian version is kept as [CONCEPT.ru.md](CONCEPT.ru.md).
 
-Ветви могут давать ответвления, то есть разделяться в любом из узлов на любое число ответвлений. Листья могут быть заданных типов. Для каждого типа листа имеется идентификатор типа, называемый ключом. Типы листов и их ключи-идентификаторы задаются заранее и служат для определения смысла и назначения информации, хранящейся в листе.
+## Taxonomy
 
-***Далее в этом документе использованы термины:***
+In `taxonorm`, a taxonomy is a hierarchical structure: a tree, or more
+precisely a forest, of nodes.  Each node has an ID and may store any number of
+named values.  Those named values are called leaves.
 
-***Стиль*** таксономии - это способ кодирования таксономии. Термину *стиль* отдано предпочтение перед термином *формат*, чтобы не путать его с **форматом** файлов таксономии.
+A node may have:
 
-***Формат*** таксономии - это формат файла таксономии. Сейчас поддерживаются форматы csv, xls, xlsx
+- child nodes;
+- leaves;
+- both child nodes and leaves;
+- neither child nodes nor leaves.
 
-* ***Ввиду похожести терминов стиль и формат в данном контексте, оба термина могут по ошибке применяться взаимозаменяемо в документе и коде до исправления всех ошибок использования терминов.*** 
+A taxonomy may have one root or several independent roots.  Because several
+roots are allowed, the internal model is a prefix forest rather than a single
+rooted tree.
 
-## Модель и табличное представление
+## Nodes, IDs, and ID Paths
 
-Каноническое внутреннее представление taxonorm — объект `Taxonomy`, то есть
-префиксный лес из узлов `TaxonomyNode`. Внешние табличные стили описывают
-каждый путь отдельно, но внутри модели общие префиксы ID-путей хранятся один
-раз.
-
-`Taxonomy` может содержать один корень или несколько независимых корней. Узел
-однозначно определяется полным путём ID от корня, а не только последним ID.
-Поэтому один и тот же ID допустим в разных частях таксономии, если отличаются
-полные пути. Один и тот же полный ID-путь не может быть объявлен дважды.
-
-`TaxonomyNode` хранит листья узла и дочерние узлы. ID самого узла не
-дублируется внутри `TaxonomyNode`: он хранится как ключ во входящем ребре
-словаря `Taxonomy.roots` или `children` родительского узла. Это уменьшает
-дублирование и естественно соответствует префиксному дереву.
-
-Листья узла задаются словарём, где ключ словаря — это ключ листа, а значение
-словаря — значение листа:
+A node ID is the identifier written on one edge of the hierarchy.  A node is
+identified in the model by its full ID path, not necessarily by the last ID
+alone.
 
 ```python
-leaves = {leaf_key_1: value_1, leaf_key_N: value_N}
+("catalog", "phones", "accessories")
 ```
 
-Для обмена между табличными парсерами, сериализаторами и моделью используется
-плоское представление ветвей. Ветвь задаётся полным ID-путём и завершается
-словарём листьев последнего узла:
+This means the same node ID may appear in different parts of the taxonomy as
+long as the full path is different:
+
+```python
+("catalog", "phones", "accessories")
+("catalog", "tablets", "accessories")
+```
+
+The repeated ID `"accessories"` is valid here because the full ID paths are
+different.  A full ID path, however, may not be declared twice unless the API
+explicitly allows replacement.
+
+Node IDs may be any non-empty hashable Python object.  Strings, integers, and
+tuples are valid when they are non-empty and hashable.  `None`, empty strings,
+strings containing only whitespace, empty tuples, empty containers, and
+unhashable objects are not valid node IDs.
+
+## Leaves and Leaf Keys
+
+Leaves are values attached to a node.  They are stored as a mapping:
+
+```python
+leaves = {
+    "en_US": "Household fans",
+    "uk_UA": "Вентилятори побутові",
+}
+```
+
+The mapping key is called a leaf key.  The mapping value is called a leaf
+value.
+
+Leaf keys follow the same requirements as node IDs: a leaf key must be a
+non-empty hashable object.  Leaf values are deliberately unrestricted: a leaf
+value may be any Python object, including `None`.
+
+Common leaf keys are locale names such as `"en_US"` or `"uk_UA"`, but this is a
+convention, not a requirement.
+
+## Internal Model
+
+The canonical in-memory representation is `Taxonomy`.  A `Taxonomy` contains
+`TaxonomyNode` objects arranged as a prefix forest.
+
+`TaxonomyNode` stores:
+
+- the node's leaves;
+- the node's children.
+
+The node ID itself is not duplicated inside `TaxonomyNode`.  It is stored as
+the key by which the node is reached from `Taxonomy.roots` or from its
+parent's `children` mapping.  This mirrors the prefix-tree structure and avoids
+duplicating IDs.
+
+## Branch Exchange Form
+
+Parsers and serializers use a flat exchange form made of branches.  A branch is
+an ID path followed by the leaves of the last node:
 
 ```python
 branches = [
-    [NodeID1, {leaf_key_1: value}],
-    [NodeID1, NodeID2, {leaf_key_1: value}],
-    [NodeID1, NodeID2, NodeID3, {leaf_key_1: value}],
+    [1, {"en_US": "Household appliances"}],
+    [1, 11, {"en_US": "Climate technology"}],
+    [1, 11, 21, {"en_US": "Household fans"}],
 ]
 ```
 
-Это представление является форматом обмена, а не внутренним устройством
-модели. `Taxonomy.from_branches()` строит префиксный лес из таких ветвей, а
-`Taxonomy.to_branches()` возвращает обратное плоское представление в стабильном
-preorder-порядке. Если в таблице есть дочерняя ветвь, но нет отдельной строки
-предка, модель создаёт недостающий узел-предок с пустыми листьями.
+This is not the internal data structure.  It is a boundary representation used
+between table parsers, serializers, IP chunk helpers, and `Taxonomy`.
 
-**ВАЖНО:** ID узла — любой непустой хэшируемый объект, ключ листа — любой
-непустой хэшируемый объект, а значение листа — любой объект, включая `None`.
-Пустыми считаются `None`, пустые и состоящие из пробелов строки, пустые кортежи
-и другие пустые контейнеры. Числа `0` и `False` допустимы, но стандартные
-словари Python считают их равными ключами.
+`Taxonomy.from_branches()` builds the prefix forest from this exchange form.
+`Taxonomy.to_branches()` returns the exchange form in stable preorder.
 
-## Уникальность идентификаторов узлов.
+If a table declares a child branch but does not declare an ancestor branch, the
+model creates the missing ancestor with empty leaves.
 
-Таксономии могут строится по различным принципам. В том числе – идентификаторы узлов в таксономиях могут быть уникальными, или повторно используемыми
+## Style vs File Format
 
-### Таксономии с уникальными идентификаторами:
+`taxonorm` distinguishes style from file format.
 
-Уникальность узлов, это такое свойство таксономии, когда каждый узел имеет уникальный идентификатор и встречается во всем дереве таксономии только один раз. Иначе говоря, в таких таксономиях мы по идентификатору узла всегда знаем его точное расположение.
+A style describes how taxonomy data is encoded inside a table.  Examples:
+`IP_H_K_T`, `LP_NH_I_S`.
 
-Примером такой таксономии является, например Google Product Taxonomy, которую можно получить по адресу:
+A file format describes the container used to store that table.  Examples:
+CSV, XLS, XLSX, JSON.
 
-<http://www.google.com/basepages/producttype/taxonomy-with-ids.en-US.txt>
-<http://www.google.com/basepages/producttype/taxonomy-with-ids.en-US.xls>
+The same taxonomy style can be stored in different file formats:
 
-В csv формате начало таксономии выглядит так (см. папку Samples/Google/Original/en-US):
-
-csv: [taxonomy-with-ids.en-US.csv](Samples/Google/Original/en-US/taxonomy-with-ids.en-US.csv)
-
-```csv
-1,      Animals & Pet Supplies,,,,,,
-3237,   Animals & Pet Supplies,Live Animals,,,,,
-2,      Animals & Pet Supplies,Pet Supplies,,,,,
-3,      Animals & Pet Supplies,Pet Supplies,Bird Supplies,,,,
-7385,   Animals & Pet Supplies,Pet Supplies,Bird Supplies,Bird Cage Accessories,,,
-499954, Animals & Pet Supplies,Pet Supplies,Bird Supplies,Bird Cage Accessories,Bird Cage Bird Baths,,
-7386,   Animals & Pet Supplies,Pet Supplies,Bird Supplies,Bird Cage Accessories,Bird Cage Food & Water Dishes,,
+```text
+IP_H_K_T.csv
+IP_H_K_T.xlsx
+LP_NH_I_NS.csv
 ```
 
-Excel: [taxonomy-with-ids.en-US.xls](Samples/Google/Original/en-US/taxonomy-with-ids.en-US.xls)
+The word style is preferred for taxonomy layout so it is not confused with the
+physical file format.
 
-|        |                        |              |               |                       |                               |
-| ------ | ---------------------- | ------------ | ------------- | --------------------- | ----------------------------- |
-| 1      | Animals & Pet Supplies |              |               |                       |                               |
-| 3237   | Animals & Pet Supplies | Live Animals |               |                       |                               |
-| 2      | Animals & Pet Supplies | Pet Supplies |               |                       |                               |
-| 3      | Animals & Pet Supplies | Pet Supplies | Bird Supplies |                       |                               |
-| 7385   | Animals & Pet Supplies | Pet Supplies | Bird Supplies | Bird Cage Accessories |                               |
-| 499954 | Animals & Pet Supplies | Pet Supplies | Bird Supplies | Bird Cage Accessories | Bird Cage Bird Baths          |
-| 7386   | Animals & Pet Supplies | Pet Supplies | Bird Supplies | Bird Cage Accessories | Bird Cage Food & Water Dishes |
+## IP and LP
 
-Таким образом, каждая товарная категория имеет уникальный идентификатор.
-И для каждого узла с заданным идентификатором ведет один и только один
-путь по дереву от узла к узлу. В случае данной таксономии за идентификатором последнего узла в каждой ветке перечислены листья узлов, которые образуют путь "по листьям" к данному узлу.
+`taxonorm` currently has two main table-style families:
 
-Такой способ описания (независимо от уникальности или неуникальности узлов), будем называть LP стилем , где LP происходит от Leaf Path:
+| Family | Meaning | Path is written as | Leaf values are written as |
+| --- | --- | --- | --- |
+| `IP` | ID Path | node IDs from root to node | values at the end of the row |
+| `LP` | Leaf Path | leaf values from root to node | usually one selected leaf key |
 
-Мы также, могли бы изложить приведенный выше пример таксономии иначе, указав путь от узла к узлу по идентификаторам, а лист узла задать для каждого узла после пути. Такой способ описания (независимо от уникальности или неуникальности узлов), будем называть IP стилем , где IP происходит от Id Path:
+### IP: ID Path
 
-csv: [IP_NH_NK_NT_en.csv](Samples/Google/Generated/IP_NH_NK_NT_en.csv)
-
-* Файл +ip_taxonomy-with-ids.en-US.csv выглядит несколько иначе, чем пример ниже, потому что сделан в табулированном стиле. Это стиль, при котором мы, для удобства редактирования в табличных редакторах, все листья помещаем в один крайний правый столбец, и тогда в последовательности идентификаторов могут появиться пустые ячейки, которые выравнивают строку под столбец листьев.
+In an IP table, each row starts with the ID path to a node:
 
 ```csv
-1,Animals & Pet Supplies
-1,3237,Live Animals
-1,2,Pet Supplies
-1,2,3,Bird Supplies
-1,2,3,7385,Bird Cage Accessories
-1,2,3,7385,499954,Bird Cage Bird Baths
-1,2,3,7385,7386, Bird Cage Food & Water Dishes
+1,Household appliances
+1,11,Climate technology
+1,11,21,Household fans
 ```
 
-xlsx: [IP_NH_NK_NT_en.xlsx](Samples/Google/Generated/IP_NH_NK_NT_en.xlsx)
+The internal branch form is the same idea, but the row ends with a leaves
+mapping:
 
-|      |                        |              |               |                       |                               |
-| ---- | ---------------------- | ------------ | ------------- | --------------------- | ----------------------------- |
-| 1    | Animals & Pet Supplies |              |               |                       |                               |
-| 1    | 2                      | Pet Supplies |               |                       |                               |
-| 1    | 2                      | 3            | Bird Supplies | Bird Supplies         |                               |
-| 1    | 2                      | 3            | 7385          | Bird Cage Accessories | Bird Cage Accessories         |
-| 1    | 2                      | 3            | 7385          | 499954                | Bird Cage Bird Baths          |
-| 1    | 2                      | 3            | 7385          | 7386                  | Bird Cage Food & Water Dishes |
+```python
+[1, 11, 21, {"en_US": "Household fans"}]
+```
 
-Но вернемся к свойству уникальности идентификаторов узлов. Если таксономия имеет данное свойство, то это значит, что все ее ветви могут быть полностью заданы триадами, состоящими из ID, ParentID и LeafValue. Такой способ (стиль) представления таксономии мы далее назовем TP Стилем, где TP происходит от Triads Path. 
+IP is the natural style when:
 
-Например, представленная выше таксономия Google, может быть задана как последовательность триад (в качестве недостающего единого корня, мы будем использовать 0):
+- node IDs are the primary way to address nodes;
+- one node may have several leaf values;
+- leaf keys are stored in the table or supplied by the caller.
 
-csv: 
+### LP: Leaf Path
+
+In an LP table, each row describes the path by leaf values.  When IDs are
+present, the first cell is the ID of the final node:
 
 ```csv
-1, 0, Animals & Pet Supplies
-3237,1, Live Animals
-2,1, Pet Supplies
-3,2, Bird Supplies
-7385,3, Bird Cage Accessories
-499954, 7385, Bird Cage Bird Baths
-7386, 7385, Bird Cage Food & Water Dishes
+1,Household appliances
+11,Household appliances,Climate technology
+21,Household appliances,Climate technology,Household fans
 ```
 
-TP можно рассматривать как крайний случай IP-таблицы, заданной обрезками
-ветвей: каждая строка содержит не полный путь от корня, а только фрагмент
-пути. Обрезок может состоять не только из пары `ParentID, NodeID`, но и из
-более длинной последовательности ID. Из таких обрезков можно восстановить
-нормальную IP-таксономию только при условии уникальности ID: каждый ID узла
-должен иметь не более одного родителя во всей таксономии. Если один ID
-встречается под разными родителями или обрезки образуют цикл, восстановление
-неоднозначно и должно считаться ошибкой входных данных.
+This is common in taxonomies such as Google Product Categories, where every
+row gives the human-readable category path.
 
-### Таксономии с неуникальными идентификаторами.
+LP is convenient when:
 
-В Таксономиях могут также применяться неуникальные идентификаторы узлов.
-Например, в файловых системах, которые можно рассматривать как
-таксономии), одно и тоже название папки (директории) может встречаться в
-разных частях дерева файловой структуры (хотя внутреннее представление файловой системы может быть иным).
+- one leaf key is enough to describe the path;
+- the table is mainly edited by humans;
+- the source already stores full category names along every row.
 
-Например, при создании таксономии товарных категорий можно поступать так:
+Because LP stores a path through leaf values, it normally uses one selected
+leaf key.  If a taxonomy must carry several leaf keys in one file, IP is the
+more general representation.
 
-csv:
+## Style Flags
+
+The style dataclasses are `IpStyle` and `LpStyle`.  File names and examples use
+compact mnemonic flags.
+
+| Flag | Meaning | Applies to |
+| --- | --- | --- |
+| `H` / `NH` | header / no header | IP, LP |
+| `K` / `NK` | leaf keys are stored / not stored | IP |
+| `I` / `NI` | node IDs are stored / generated from leaf paths | LP |
+| `T` / `NT` | tabbed / not tabbed | IP |
+| `S` / `NS` | sparse / dense | LP |
+
+Examples:
+
+| Style | Meaning |
+| --- | --- |
+| `IP_H_K_T` | IP table with a header, leaf keys in the header, tabbed ID columns |
+| `IP_NH_K_NT` | IP table without header, key/value pairs in each row, not tabbed |
+| `IP_NH_NK_NT` | IP table without header or stored keys; leaf key order is supplied by the caller |
+| `LP_H_I_NS` | LP table with header, own IDs, dense leaf paths |
+| `LP_NH_NI_S` | LP table without header or own IDs, sparse leaf paths |
+
+## Header
+
+A header is a first table row that is not a taxonomy branch.
+
+In most styles, `header=True` simply means "skip the first row when parsing."
+
+There is one important IP exception: in `IP_H_K_T`, leaf keys are stored in the
+header.  The parser uses the first header cell matching one of the supplied
+leaf keys to find where the leaf-value columns begin.
+
+```csv
+,,,,en_US,uk_UA
+101,,,,HOUSE APPLIANCES AND GOODS,ПОБУТОВА ТЕХНІКА ТА ТОВАРИ
+101,1,,,Air conditioning equipment,Кліматична техніка
+```
+
+## Leaf Keys in IP Tables
+
+IP tables can store or omit leaf keys.
+
+### Keyed IP Rows
+
+When `keys=True` and the keys are not stored in the header, every row contains
+key/value pairs after the ID path:
+
+```csv
+101,en_US,HOUSE APPLIANCES AND GOODS,uk_UA,ПОБУТОВА ТЕХНІКА ТА ТОВАРИ
+101,1,en_US,Air conditioning equipment,uk_UA,Кліматична техніка
+```
+
+The caller still passes the expected leaf keys to the parser.  This lets the
+parser distinguish leaf keys from ordinary leaf values.
+
+### IP Rows Without Stored Keys
+
+When `keys=False`, the last N cells are interpreted as leaf values, where N is
+the number of leaf keys supplied by the caller:
+
+```csv
+101,HOUSE APPLIANCES AND GOODS,ПОБУТОВА ТЕХНІКА ТА ТОВАРИ
+101,1,Air conditioning equipment,Кліматична техніка
+```
+
+Here the caller might pass:
+
+```python
+leaf_keys = ["en_US", "uk_UA"]
+```
+
+The order of `leaf_keys` is significant.
+
+## Tabbed IP
+
+A tabbed IP table aligns ID columns and leaf-value columns for spreadsheet
+editing.  Empty cells are used only as alignment placeholders:
+
+```csv
+101,,,,HOUSE APPLIANCES AND GOODS,ПОБУТОВА ТЕХНІКА ТА ТОВАРИ
+101,1,,,Air conditioning equipment,Кліматична техніка
+101,1,1,,Household fans,Вентилятори побутові
+101,1,1,1,Exhaust fans,Вентилятори витяжні
+```
+
+The empty cells do not mean missing node IDs.  They are part of the tabular
+layout.
+
+In tabbed IP tables, any number of empty columns may appear between the ID path
+area and the leaf-value area.
+
+## Sparse and Dense LP
+
+LP leaf paths often repeat the same prefix in many adjacent rows:
+
+```csv
+1,Household appliances
+11,Household appliances,Climate technology
+21,Household appliances,Climate technology,Household fans
+```
+
+A sparse LP table stores repeated prefix values only once and leaves the later
+cells empty:
+
+```csv
+1,Household appliances
+11,,Climate technology
+21,,,Household fans
+```
+
+The dense form can be reconstructed only when rows are in an order that makes
+the inherited values unambiguous.  Therefore sparse LP tables are intended to
+be sorted.
+
+Non-sparse LP tables may also be called dense tables.
+
+Sparse currently applies to LP styles.  IP sparse notation is not a separate
+style in the current public API.
+
+## Unique and Reused IDs
+
+Some taxonomies use globally unique node IDs.  If an ID is globally unique,
+the ID alone is enough to know which node is meant.
+
+Other taxonomies reuse local IDs in different parts of the tree:
 
 ```csv
 101,HOUSE APPLIANCES AND GOODS
@@ -178,355 +320,83 @@ csv:
 101,1,1,2,Floor fans
 ```
 
-Excel:
-
-|      |                  |                            |                |              |
-| ---: | :--------------: | :------------------------: | :------------: | :----------: |
-|  101 | HOUSE APPLIANCES |                            |                |              |
-|  101 |        1         | Air conditioning equipment |                |              |
-|  101 |        1         |             1              | Household fans |              |
-|  101 |        1         |             1              |       1        | Exhaust fans |
-|  101 |        1         |             1              |       2        |  Floor fans  |
-
-### Разреженные (sparse) стили
-
-Мы видим, что при построчном задании таксономии, мы 
-постоянно повторяем некоторую часть пути по листьям 
-или по идентификаторам.
-
-Например:
-
-```csv
-1, Animals & Pet Supplies
-3237, Animals & Pet Supplies, Live Animals
-2, Animals & Pet Supplies, Pet Supplies
-3, Animals & Pet Supplies, Pet Supplies, Bird Supplies
-7385, Animals & Pet Supplies, Pet Supplies, Bird Supplies,    
-Bird Cage Accessories
-```
-
-Для экономии памяти, мы могли бы заменить повторяющиеся сверху вниз значения пустыми значениями кроме самого первого (потом, при необходимости, мы могли бы восстановить вид каждой ветки):
-
-```csv
-1,      Animals & Pet Supplies
-3237,                           ,Live Animals
-2,                              ,Pet Supplies
-3,                              ,            ,Bird Supplies
-7385,                           ,            ,             ,Bird Cage Accessories
-```
-
-Конечно, перевод в такой Sparse стиль возможен лишь в отсортированных таксономиях.
-
-\* Для полноты терминологии, не разреженные стили в этом документе или в коде приложения могут называться ***плотными (dense)***
-
-## Способы табличного представления - стили таксономий
-
-Далее в тексте, метод кодирования таксономий будут идентифицироваться
-одним из следующих акронимов, в зависимости от того, чем представлен
-путь по каждой ветке и как кодируются ключи листьев:
-
-| Мнемоника | Значение                                                     |
-| :-------: | :----------------------------------------------------------- |
-|  **IP**   | От **I**d**P**ath + leaves. Путь задается идентификаторами узлов (Node ID), значения листьев перечислены в конце пути. |
-|  **LP**   | От Id **+** **L**eaf **P**ath. Первым значением стоит идентификатор узла, затем перечислены значения листа по выбранному ключу от корня до узла с заданным Node ID |
-|  **TP**   | От **T**riple **P**ath или **T**riade **P**ath. Рассмотренный выше способ кодирования таксономии триадами (только при уникальных Node ID) |
-
-## Примеры стилей таксономий
-
-Файлы примеров различных стилей и форматов (xls, xlsx, csv) таксономий находятся в папке:
-./Samples/Formats
-
-Эти файлы предназначены для тестирования парсера/конвертера стилей и форматов таксономий 
-
-При именовании файлов примеров применяется следующее соглашение:
-
-Первые две буквы – это LP для LP Формата, IP для IP Формата, TP для TP формата. 
-Далее, через знак подчеркивания, перечисляются свойства формата. Каждое
-свойство кодируется одной буквой. Если буква опущена, или перед ней
-стоит буква N – это значит, что формат не обладает данным свойством.
-Например, LP_H.csv указывает, что файл содержит пример таксономии
-формата LP с заголовком. Соответственно, имя файла LP_NH.csv или LP.csv
-означает, что формат таксономии не содержит заголовка.
-
-Свойства, кодируемые в имени файла:
-
-| Мнемоника         | Значение                                                     | Поле датакласса стиля                          |
-| :---------------- | :----------------------------------------------------------- | ---------------------------------------------- |
-| **H** (Header)    | Есть Заголовок                                               | IpStyle.header, LpStyle.header, TpStyle.header |
-| **K** (Keys)      | Файл IP таксономии содержит ключи листьев                    | IpStyle.own_keys                               |
-| **I** (Ids)       | Файл LP таксономии содержит идентификаторы веток             | LpStyle.own_ids                                |
-| **T** (Tabulated) | Файл IP таксономии табулирован тем или иным способом, например в csv – пустые позиции обозначены запятыми без значений между ними, как пустые. Табулированные форматы предназначены для удобства работы с ними в табличных редакторах (например, Excel). **Важно:** **LP**-sparse стиль всегда табулирован, поэтому если указан **S** то подразумевается и **T**, а если указан **NT** – он игнорируется. | IpStyle.tabbed                                 |
-| **S** (Sparse)    | Файл IP/LP таксономии содержит разреженные последовательности. Данный стиль всегда табулирован. Предназначен для компактного хранения. В этом формате, если в столбце есть подряд повторяющиеся значения (снизу вверх в строках, идущих подряд), то значение указывается только в той первой строке, где значение встретилось. А во всех подряд за ним идущих строках это значение опускается. Для того, чтобы так хранить таксономию, все строки (ветви) формата должны быть табулированы и отсортированы | IpStyle.sparse, LpStyle.sparse                 |
-
-### LP Формат (мнемоника от LeafPath - то есть путь по ветке задается листьями (значениями листьев)
-
-В LP-формате - каждая ветка узла кодируется последовательностью
-(списком), где первый элемент списка — это идентификатор узла, а
-последующие элементы списка — это значения листьев в каждом узле по пути
-к данному узлу от корня. При таком представлении таксономии
-предполагается что есть всего один тип листа/ключ листа, который может
-быть любым и задается парсеру или назначается по умолчанию. 
-В текущей версии приложения ключ по умолчанию: DEFAULT_LEAF_KEY = '@'
-
-#### Пример LP_I Стиля (LP, Id ветвей включены): Google Product Categories
-
-csv: LP_NH_NS.csv
-
-```csv
-1,Animals & Pet Supplies,,,
-3237,Animals & Pet Supplies,Live Animals,,
-2,Animals & Pet Supplies,Pet Supplies,,
-3,Animals & Pet Supplies,Pet Supplies,Bird Supplies,
-7385,Animals & Pet Supplies,Pet Supplies,Bird Supplies,Bird Cage Accessories
-```
-
-excel: LP_NH_NS.xlsx
-
-| id   | root node leaf         | node leaf    | node leaf     | node leaf             |
-| ---- | ---------------------- | ------------ | ------------- | --------------------- |
-| 1    | Animals & Pet Supplies |              |               |                       |
-| 3237 | Animals & Pet Supplies | Live Animals |               |                       |
-| 2    | Animals & Pet Supplies | Pet Supplies |               |                       |
-| 3    | Animals & Pet Supplies | Pet Supplies | Bird Supplies |                       |
-| 7385 | Animals & Pet Supplies | Pet Supplies | Bird Supplies | Bird Cage Accessories |
-
-Пример этой же таксономии в разреженной (sparse) форме:
-
-csv: LP_NH_S.csv
-
-```csv
-1,Animals & Pet Supplies,,,
-3237,,Live Animals,,
-2,,Pet Supplies,,
-3,,,Bird Supplies,
-7385,,,,Bird Cage Accessories
-```
-
-Excel: LP_NH_S.xlsx
-
-|      |                        |              |               |                       |
-| ---- | ---------------------- | ------------ | ------------- | --------------------- |
-| 1    | Animals & Pet Supplies |              |               |                       |
-| 3237 |                        | Live Animals |               |                       |
-| 2    |                        | Pet Supplies |               |                       |
-| 3    |                        |              | Bird Supplies |                       |
-| 7385 |                        |              |               | Bird Cage Accessories |
-
-### IP Форматы (мнемоника от IdPath, то есть путь к узлу задан идентификаторами узлов)
-
-***В IP формате*** - ветка каждого узла (путь к узлу) кодируется
-последовательностью идентификаторов узлов по пути к данному
-узлу от корня. Последний элемент последовательности — это
-последовательность значений листьев, или значение листа, если он один.
-
-В IP формате можно также хранить ключи листьев, одновременно со значениями по этим ключам (значения листьев).
-
-Это можно сделать тремя способами:
-
-1) В конце каждой ветки после перечисления идентификаторов узлов на
-   пути от корня к данному узлу можно указывать: "ключ_Листа1",
-   "значение_Листа1", ..., "ключ_ЛистаN", "значение_ЛистаN".
-
-2) В заголовках столбцов листьев (тогда значения листьев должны быть
-   выровнены по столбцам (табулированы)
-
-3) Вне файла таксономии. Тогда при парсинге файла нужно будет сообщить
-   список ключей модулю парсинга и тогда парсер будет понимать, что
-   последние N значений в каждой ветке – это ключи, где N – это число
-   ключей, которые сообщены парсеру. Из этого следует, что порядок
-   переданных парсеру ключей листьев так и порядок расположения
-   значений листьев имеют значение и должны совпадать.
-
-Рассмотрим подробнее:
-
-#### Стиль IP_K. Ключи содержатся в каждой ветке.
-
-При таком хранении, в каждой ветке сначала перечисляются идентификаторы
-предшествующих узлов (путь от корня до узла), а затем перечисляются
-ключи и их значения в виде ключ_1, значение_1, ... ключ_N, значение_N
-
-##### Пример не табулированного файла вида IP_K_NH:
-
-В этом примере используется ключ 'en_US' для оригинальных названий
-категорий и ключ 'uk_UA' для их переводов на украинский язык.
-
-Важно: В формате IP(a), несмотря на то, что ключи содержатся в самой
-таксономии, мы все равно должны заранее создать перечень этих ключей (а
-значит и видов листьев) – ‘en_US’, ‘ik_UA’ – и передать их парсеру, что
-бы он мог отличить ключи листьев от значений листьев:
-
-(\*) В примерах использован английский и украинский язык
-
-Csv:
-
-```csv
-101,en_US,HOUSE APPLIANCES AND GOODS,uk_UA,ПОБУТОВА ТЕХНІКА ТА ТОВАРИ,,,
-101,1,en_US,Air conditioning equipmen_USt,uk_UA,Кліматична техніка,,
-101,1,1,en_US,Household fans,uk_UA,Вентилятори побутові,
-101,1,1,1,en_US,Exhaust fans,uk_UA,Вентилятори витяжні
-```
-
-Excel:  (\* В примере использован английский и украинский язык)
-
-|      |       |                            |                               |                            |                    |                      |                     |
-| :--: | :---: | :------------------------: | :---------------------------: | :------------------------: | :----------------: | :------------------: | :-----------------: |
-| 101  | en_US | HOUSE APPLIANCES AND GOODS |             uk_UA             | ПОБУТОВА ТЕХНІКА ТА ТОВАРИ |                    |                      |                     |
-| 101  |   1   |           en_US            | Air conditioning equipmen_USt |           uk_UA            | Кліматична техніка |                      |                     |
-| 101  |   1   |             1              |             en_US             |       Household fans       |       uk_UA        | Вентилятори побутові |                     |
-| 101  |   1   |             1              |               1               |           en_US            |    Exhaust fans    |        uk_UA         | Вентилятори витяжні |
-
-##### Пример табулированного стиля IP_K_NH_T.
-
-Такой формат удобно обрабатывать в табличных редакторах, например Excel.
-
-Csv: 
-
-```csv
-101,    ,   ,   ,   en_US,  HOUSE APPLIANCES AND GOODS, uk_UA,  ПОБУТОВА ТЕХНІКА ТА ТОВАРИ
-101,    1,  ,   ,   en_US,  Air conditioning equipment, uk_UA,  Кліматична техніка
-101,    1,  1,  ,   en_US,  Household fans,             uk_UA,  Вентилятори побутові
-101,    1,  1,  1,  en_US,  Exhaust fans,               uk_UA,  Вентилятори витяжні
-```
-
-Excel: 
-
-|      |      |      |      |       |                            |       |                            |
-| ---- | ---- | ---- | ---- | ----- | -------------------------- | ----- | -------------------------- |
-| 101  |      |      |      | en_US | HOUSE APPLIANCES AND GOODS | uk_UA | ПОБУТОВА ТЕХНІКА ТА ТОВАРИ |
-| 101  | 1    |      |      | en_US | Air conditioning equipment | uk_UA | Кліматична техніка         |
-| 101  | 1    | 1    |      | en_US | Household fans             | uk_UA | Вентилятори побутові       |
-| 101  | 1    | 1    | 1    | en_US | Exhaust fans               | uk_UA | Вентилятори витяжні        |
-
-### Стиль IP_K_H_T. Ключи содержатся в заголовке 
-
-**Если указано H, K и T, то  выбирается и применяется только этот способ хранения ключей: в заголовке.**
-
-Это удобный компактный формат и его удобнее всего обрабатывать в
-табличных редакторах, например Excel.
-
-csv:
-
-```csv
-,,,,en_US,uk_UA
-101,,,,HOUSE APPLIANCES AND GOODS,ПОБУТОВА ТЕХНІКА ТА ТОВАРИ
-101,1,,,Air conditioning equipment,Кліматична техніка
-101,1,1,,Household fans,Вентилятори побутові
-101,1,1,1,Exhaust fans,Вентилятори витяжні
-```
-
-Excel: 
-
-|      |      |      |      | en_US                      | uk_UA                      |
-| ---- | ---- | ---- | ---- | -------------------------- | -------------------------- |
-| 101  |      |      |      | HOUSE APPLIANCES AND GOODS | ПОБУТОВА ТЕХНІКА ТА ТОВАРИ |
-| 101  | 1    |      |      | Air conditioning equipment | Кліматична техніка         |
-| 101  | 1    | 1    |      | Household fans             | Вентилятори побутові       |
-| 101  | 1    | 1    | 1    | Exhaust fans               | Вентилятори витяжні        |
-
-------
-
-### Стиль IP_NK. Таксономия не содержит ключей.
-
-#### Нетабулированный формат
-
-При таком форматировании ВСЕГДА последние элементы каждой ветки содержат
-значения листьев по числу ключей для которых создан файл. Перечень этих
-ключей должен быть предоставлен парсеру при импорте таксономии такого
-формата
-
-csv: IP_NK_NH.csv
-
-```csv
-101,HOUSE APPLIANCES AND GOODS,ПОБУТОВА ТЕХНІКА ТА ТОВАРИ,,,
-101,1,Air conditioning equipment,Кліматична техніка,,
-101,1,1,Household fans,Вентилятори побутові,
-101,1,1,1,Exhaust fans,Вентилятори витяжні
-```
-
-Excel: P_NK_NH.xlsx
-
-| 101  | HOUSE APPLIANCES AND GOODS | ПОБУТОВА ТЕХНІКА ТА ТОВАРИ |                    |                      |                     |
-| ---- | -------------------------- | -------------------------- | ------------------ | -------------------- | ------------------- |
-| 101  | 1                          | Air conditioning equipment | Кліматична техніка |                      |                     |
-| 101  | 1                          | 1                          | Household fans     | Вентилятори побутові |                     |
-| 101  | 1                          | 1                          | 1                  | Exhaust fans         | Вентилятори витяжні |
-
-#### Табулированный формат
-
-csv: IP_NK_NH_T.csv
-
-```csv
-101,,,,HOUSE APPLIANCES AND GOODS,ПОБУТОВА ТЕХНІКА ТА ТОВАРИ,
-101,1,,,Air conditioning equipment,Кліматична техніка,
-101,1,1,,Household fans,Вентилятори побутові,
-101,1,1,1,Exhaust fans,Вентилятори витяжні,
-```
-
-xlsx: IP_NK_NH_T.xlsx
-
-| 101  |      |      |      | HOUSE APPLIANCES AND GOODS |      | ПОБУТОВА ТЕХНІКА ТА ТОВАРИ |
-| ---- | ---- | ---- | ---- | -------------------------- | ---- | -------------------------- |
-| 101  | 1    |      |      | Air conditioning equipment |      | Кліматична техніка         |
-| 101  | 1    | 1    |      | Household fans             |      | Вентилятори побутові       |
-| 101  | 1    | 1    | 1    | Exhaust fans               |      | Вентилятори витяжні        |
-
-\* ТАКИМ ОБРАЗОМ, Если листьев предусмотрено более одного вида (число
-ключей листьев (leaf_key), то единственный способ представления такой
-таксономии в одном файле - это IP форматы.
-
-### Логические правила, дополняющие свойства стиля:
-
-1. В табулированных IP таксономиях, между столбцами путей и столбцами значений допускается любое число пустых столбцов.
-
-2. Если для IP таксономии одновременно указано T, H и K, то считается, что ключи находятся в заголовке и это единственный способ сказать, что ключи - в заголовке.
-
-3. Если указан H, то это означает не более чем тот факт, что первую строку нужно пропустить. Единственное исключение описано в п.2 абзацем выше.
-
-4. В текущей реализации, табулирование в LP таксономиях не имеет смысла и не применяется (игнорируется)
-
-5. В текущей реализации, разреженный формат (sparse) не применяется  для IP Стиля
-
-## Пакет taxonorm
-
-Пакет должен читать таксономию любого поддерживаемого формата таксономии 
-(LP, LPS, IP, IPS, TP) из файла любого из поддерживаемых форматов (xlsx, xls,
-csv) и сохранять его любом заданном формате таксономии в файлы форматов
-xlsx, xls, csv любого указанного формата таксономий (все LP, LPS, IP, IPS, TP)
-
-При выполнении загрузки, конвертации и сохранения модуль хранит таксономию в
-объекте `Taxonomy`, описанном выше. Для обмена между табличными парсерами и
-моделью ветвь имеет вид:
-
-Id1, …, idN, {leaf_1_Key:leaf_1_Value, …, leaf_M_key:leaf_M_value}, где idN -
-Идентификатор узла, а Leaf_M_Key – ключ листа, Leaf_M_Value – значение листа
-Leaf_M по ключу Leaf_M_Key.
-
-Например, во фрагменте таксономии ниже, предусмотрен только один вид
-листа – название категории. Задан ключ этого листа - ‘@’. Как правило,
-если ключ один и он явно не задан, то предполагается ключ по умолчанию =
-‘@’
+This is valid in `taxonorm` because the full ID path identifies the node:
 
 ```python
-[
- ['101', {'@': 'ПОБУТОВА ТЕХНІКА ТА ТОВАРИ'}],
- ['101', '01', {'@': 'Кліматична техніка'}],
- ['101', '01', '01', {'@': 'Вентилятори побутові'}],
- ['101', '01', '01', '01', {'@': 'Вентилятори витяжні'}],
- ['101', '01', '01', '02', {'@': 'Вентилятори підлогові'}]
-]
+(101, 1, 1, 1)
+(101, 1, 1, 2)
 ```
 
-- `leaf_key` должен удовлетворять требованиям, предъявляемым к ключам
-  словарей, и не может быть пустым (в том числе строкой пробелов), пустым
-  объектом даже хэшируемого типа, или None. Например, ключ не может
-  быть, например пустым Tuple()
+Many file-system-like structures behave this way: the same local name may
+appear in different directories.
 
-- Все функции библиотеки (и модуля taxonorm, в частности) должны
-  поддерживать тот принцип, что ID узла – это **любой непустой хэшируемый объект**,
-  ключ листа – также **любой непустой хэшируемый объект**, а значение
-  листа по ключу листа – это любой объект, включая None.
+## IP Chunks
 
-- Порядок узлов не определяется сортировкой ID. `Taxonomy` сохраняет порядок
-  добавления корней и соседних узлов, а выгрузка ветвей выполняется стабильным
-  обходом дерева. Поэтому ID не обязаны быть сравнимыми между собой или
-  приводимыми к строке для сортировки.
+Earlier design notes treated triples such as `node_id, parent_id, leaf_value`
+as a separate TP style.  In the current API, this idea is handled as IP chunks,
+not as a separate style family.
+
+An IP chunk is a partial ID path.  For example, instead of storing every full
+path:
+
+```python
+[0, 1, 101, 777, {"en_US": "Notebook cables"}]
+```
+
+a source may store smaller pieces:
+
+```python
+[0, 1, {"en_US": "Notebooks"}]
+[1, 101, {"en_US": "Notebook parts"}]
+[101, 777, {"en_US": "Notebook cables"}]
+```
+
+These chunks can be restored to full IP paths only when node IDs are unique
+enough to make every parent relationship unambiguous.  Restoration is invalid
+when:
+
+- one ID has more than one parent;
+- chunks form a cycle;
+- the same terminal ID is described with conflicting leaves.
+
+The relevant helpers are:
+
+```python
+restore_unique_ip_chunks(chunks)
+split_to_unique_ip_chunks(taxonomy, max_chunk_len=2)
+```
+
+`parse_taxonomy(..., restore_ip_chunks=True)` can restore chunks during IP
+parsing.
+
+## Model Invariants
+
+The public model follows these rules:
+
+- a node is identified by its full ID path;
+- a full ID path is unique inside one `Taxonomy`;
+- a node ID may be reused under different parents;
+- a node ID must be non-empty and hashable;
+- a leaf key must be non-empty and hashable;
+- a leaf value may be any object, including `None`;
+- roots and siblings preserve insertion order;
+- traversal order is explicit (`preorder`, `postorder`, or `breadth`);
+- IDs do not need to be mutually comparable or sortable.
+
+Python dictionary equality means some values are considered the same key even
+if their types differ.  For example, `0` and `False` compare equal as dictionary
+keys.  This is normal Python behavior and applies to node IDs and leaf keys.
+
+## Import, Parse, Serialize, Export
+
+`taxonorm` separates model operations from table and file operations:
+
+| Operation | Direction | Result |
+| --- | --- | --- |
+| parse | branch table -> `Taxonomy` | in-memory model |
+| import | file -> `Taxonomy` | in-memory model |
+| serialize | `Taxonomy` -> branch table | table data |
+| export | `Taxonomy` -> file | written file |
+
+The README contains practical API examples for these operations.  This
+document explains the terms used by those examples.

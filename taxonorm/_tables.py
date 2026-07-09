@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Callable, TypeGuard
+from typing import Any, Callable, TypeGuard, cast
 import csv
 import json
 
@@ -29,6 +29,85 @@ def add_ext(path: str | Path, ext: str) -> str:
 
 def is_llist(value: object) -> TypeGuard[list[list[Any]]]:
     return isinstance(value, list) and all(isinstance(row, list) for row in value)
+
+
+def is_dataframe(value: object) -> bool:
+    """Return whether *value* looks like a pandas DataFrame without importing pandas."""
+    cls = type(value)
+    return (
+        cls.__module__.startswith("pandas")
+        and hasattr(value, "columns")
+        and hasattr(value, "to_numpy")
+        and hasattr(value, "isna")
+    )
+
+
+def _has_default_dataframe_columns(columns: Any) -> bool:
+    try:
+        values = list(columns)
+    except TypeError:
+        return False
+    return values == list(range(len(values)))
+
+
+def _dataframe_rows(dataframe: Any, *, none: bool) -> list[list[Any]]:
+    rows = cast(list[list[Any]], dataframe.to_numpy(dtype=object).tolist())
+    if not none:
+        return rows
+
+    missing_mask = dataframe.isna().to_numpy(dtype=bool).tolist()
+    return [
+        [None if missing else cell for cell, missing in zip(row, mask_row)]
+        for row, mask_row in zip(rows, missing_mask)
+    ]
+
+
+def dataframe_to_llist(
+    dataframe: Any,
+    cvt_dict: dict[Any, Any] | None = None,
+    *,
+    header: bool | None = None,
+    none: bool = True,
+    skip_empty: bool = True,
+    preserve_first: bool = True,
+    eol: Any = None,
+    trim_empty_tails: bool = True,
+) -> list[list[Any]]:
+    """Convert a pandas DataFrame to the list-of-lists table used by taxonorm.
+
+    The function intentionally avoids importing pandas.  When *header* is
+    ``True``, DataFrame columns become the first row.  When *header* is
+    ``None``, columns are included only if they do not look like pandas'
+    default ``RangeIndex(0, n)``.
+    """
+    if not is_dataframe(dataframe):
+        raise TableFormatError("DataFrame source must be a pandas DataFrame")
+
+    include_header = (
+        not _has_default_dataframe_columns(dataframe.columns)
+        if header is None
+        else header
+    )
+    rows = _dataframe_rows(dataframe, none=none)
+    if include_header:
+        rows.insert(0, list(dataframe.columns))
+
+    rows = _prepare_external_rows(
+        rows,
+        source_name="DataFrame",
+        none=none,
+        skip_empty=skip_empty,
+        preserve_first=preserve_first,
+        eol=eol,
+        trim_empty_tails=trim_empty_tails,
+    )
+    _apply_table_conversion(
+        rows,
+        cvt_dict,
+        header=include_header,
+        source_name="DataFrame",
+    )
+    return rows
 
 
 def is_empty_llist(rows: object) -> bool:

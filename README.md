@@ -7,6 +7,7 @@ representation `[id1, ..., idN, {leaf_key: value}]` is used at parser,
 serializer, import, and export boundaries.
 
 Russian documentation is preserved in [README.ru.md](README.ru.md).
+Conceptual terminology and style names are introduced in [CONCEPT.md](CONCEPT.md).
 Terminology for future documentation and message translation is tracked in
 [docs/GLOSSARY.md](docs/GLOSSARY.md).
 
@@ -23,6 +24,8 @@ Small runnable examples live in `Examples/`:
 
 - [sample_import.py](Examples/sample_import.py) imports a CSV in
   `IpStyle(header=True, keys=True, tabbed=True)` and inspects the model;
+- [sample_pandas_import.py](Examples/sample_pandas_import.py) imports an
+  in-memory `pandas.DataFrame` with the same IP style;
 - [sample_parse_rows.py](Examples/sample_parse_rows.py) parses rows that are
   already loaded in memory;
 - [sample_api_tour.py](Examples/sample_api_tour.py) is a compact tour through
@@ -34,6 +37,8 @@ Small runnable examples live in `Examples/`:
   `iter_branches()` and `iter_paths()` for bulk path views;
 - [sample_chunks.py](Examples/sample_chunks.py) restores and splits unique-ID
   IP chunks;
+- [sample_adapters.py](Examples/sample_adapters.py) exports a taxonomy to
+  `networkx` and `bigtree`;
 - [sample_export.py](Examples/sample_export.py) exports the same taxonomy to
   another style;
 - [sample_validate.py](Examples/sample_validate.py) prints a user-facing
@@ -175,6 +180,34 @@ taxonomy = import_taxonomy(
 
 See [Examples/sample_import.py](Examples/sample_import.py) for a full runnable
 version.
+
+`import_taxonomy()` also accepts an in-memory `pandas.DataFrame`. Pandas is an
+optional dependency and is not imported by taxonorm unless you pass a DataFrame.
+When `styler.header=True`, DataFrame columns are treated as the header row:
+
+```python
+import pandas as pd
+
+from taxonorm import IpStyle, import_taxonomy
+
+dataframe = pd.read_csv("Samples/Variants/Shorts/U_IP_H_K_T.csv", dtype=object)
+taxonomy = import_taxonomy(
+    dataframe,
+    styler=IpStyle(header=True, keys=True, tabbed=True),
+    leaf_keys=["en_US", "uk_UA"],
+)
+```
+
+When `styler.header=False`, DataFrame columns are ignored. If `styler` is not
+specified, non-default DataFrame columns are included for style guessing, while
+default columns such as `0, 1, 2` are ignored. Install pandas support with:
+
+```shell
+pip install "taxonorm[pandas]"
+```
+
+See [Examples/sample_pandas_import.py](Examples/sample_pandas_import.py) for a
+full runnable version.
 
 ### Low-Level Parsing and Style Guessing
 
@@ -668,6 +701,45 @@ tree, so equal labels do not collapse distinct nodes.
 
 `render_text_tree()` returns a Rich tree without printing it. `save_text_tree()`
 saves a text tree to a file.
+
+### Graph and Tree Library Adapters
+
+`to_networkx()` and `to_bigtree()` export a taxonomy to optional third-party
+libraries:
+
+```python
+from taxonorm import to_bigtree, to_networkx
+
+graph = to_networkx(taxonomy, label_key="en_US")
+tree = to_bigtree(taxonomy, label_key="en_US")
+```
+
+Install the optional dependencies when you need these adapters:
+
+```shell
+pip install "taxonorm[graph]"
+pip install "taxonorm[tree]"
+```
+
+`networkx` node keys are full ID paths, for example `(1, 12, 22, 31)`.
+Node attributes include `node_id`, `id_path`, `depth`, `leaves`, and `label`.
+This preserves repeated local IDs without changing the taxonomy.
+
+`bigtree` requires string node names and a single root, so `to_bigtree()` puts
+the taxonomy under a synthetic root named `"Taxonomy"`. Original IDs and paths
+are preserved as `node_id` and `id_path`. Leaf dictionaries are stored as
+`leaf_values` because `bigtree` already uses `leaves` for its own API.
+
+Both adapters support an explicit renumbering mode:
+
+```python
+renumbered_graph = to_networkx(taxonomy, renumber=True)
+renumbered_tree = to_bigtree(taxonomy, renumber=True)
+```
+
+Renumbering is applied to a copy and does not mutate the source taxonomy. See
+[Examples/sample_adapters.py](Examples/sample_adapters.py) for a runnable
+example.
 
 ### Serialization and Export
 

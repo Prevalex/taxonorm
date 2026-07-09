@@ -8,7 +8,12 @@ from collections import Counter
 from taxonorm._sequences import is_empty_list, count_non_empty, take_items_of_list_from_other_list
 from taxonorm._introspection import inspect_location
 from taxonorm._validation import is_empty
-from taxonorm._tables import read_llist_from_file, is_llist
+from taxonorm._tables import (
+    dataframe_to_llist,
+    is_dataframe,
+    is_llist,
+    read_llist_from_file,
+)
 
 from taxonorm.common import IpStyle, LpStyle, tStyler, SNIFFER_ACCURACY
 from taxonorm.errors import TxValidationError, TxInternalError
@@ -186,7 +191,7 @@ def is_s(sprs:list[int], rows:int):
     return count_sprs[1] > SNIFFER_ACCURACY * rows
 
 
-def guess_style(taxonomy: Path | str | list[list[Any]], leaf_keys:list[Hashable], cvt_dict:dict|None=None) -> tStyler:
+def guess_style(taxonomy: Any, leaf_keys:list[Hashable], cvt_dict:dict|None=None) -> tStyler:
 
     validate_leaf_keys(leaf_keys)
 
@@ -205,10 +210,15 @@ def guess_style(taxonomy: Path | str | list[list[Any]], leaf_keys:list[Hashable]
     if isinstance(taxonomy, (Path, str)):
         branch_list = read_llist_from_file(taxonomy, cvt_dict=cvt_dict)
 
+    elif is_dataframe(taxonomy):
+        branch_list = dataframe_to_llist(taxonomy, cvt_dict=cvt_dict, header=None)
+
     elif is_llist(taxonomy):
         branch_list = taxonomy
     else:
-        raise TxValidationError('taxonomy is not Path, filename:str or list or lists')
+        raise TxValidationError(
+            "taxonomy is not a Path, filename string, pandas DataFrame, or list of lists"
+        )
 
     validate_branch_list(branch_list)
 

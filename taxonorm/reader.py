@@ -4,7 +4,13 @@
 from typing import Any, Callable
 from pathlib import Path
 
-from taxonorm._tables import read_llist_from_file, is_llist, is_completed_llist
+from taxonorm._tables import (
+    dataframe_to_llist,
+    is_completed_llist,
+    is_dataframe,
+    is_llist,
+    read_llist_from_file,
+)
 from taxonorm._introspection import inspect_location
 from taxonorm._console import wrn
 
@@ -16,7 +22,7 @@ from taxonorm.parser import parse_taxonomy, trim_string_cells, trim_string_leaf_
 from taxonorm.sniffer import guess_style
 from taxonorm.validation import validated_leaf_keys
 
-def import_taxonomy(source: str | Path | list[list[Any]], *,
+def import_taxonomy(source: Any, *,
                     leaf_keys: list | tuple | None = None,
                     styler: tStyler | None = None,
                     sheet: Any = None,
@@ -63,12 +69,24 @@ def import_taxonomy(source: str | Path | list[list[Any]], *,
                                              codepage=codepage,
                                              skip_empty=True,
                                              eol=eol)
+        validation_source = str(source)
+    elif is_dataframe(source):
+        taxonomy_data = dataframe_to_llist(
+            source,
+            cvt_dict=cvt_dict,
+            header=_header_,
+            none=none,
+            skip_empty=True,
+            eol=eol,
+        )
+        validation_source = "pandas.DataFrame"
     elif is_llist(source):
         taxonomy_data = source
+        validation_source = None
 
     else:
         raise TxImportError(
-            "Imported taxonomy must be a file path or a list of rows. "
+            "Imported taxonomy must be a file path, pandas DataFrame, or a list of rows. "
             f"The row list must not contain empty branch rows. {type(source)=}"
         )
 
@@ -87,7 +105,7 @@ def import_taxonomy(source: str | Path | list[list[Any]], *,
                                          restore_ip_chunks=restore_ip_chunks,
                                          validate=validate,
                                          max_validation_issues=max_validation_issues,
-                                         validation_source=str(source) if isinstance(source, (str, Path)) else None)
+                                         validation_source=validation_source)
         return parsed_taxonomy
     else:
         raise TxImportError("Read data does not contain a taxonomy.")
