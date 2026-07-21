@@ -185,7 +185,7 @@ def test_ip_chunks_without_keys_reject_too_many_leaf_keys() -> None:
 
 def test_real_mti_tp_file_imports_as_restored_ip_taxonomy() -> None:
     taxonomy = import_taxonomy(
-        ROOT / "zArc" / "Experiments" / "mti" / "mti_grp_swap.csv",
+        ROOT / "Samples" / "Variants" / "Chunks" / "IP_Chunks.csv",
         styler=IpStyle(header=False, keys=False, tabbed=False),
         leaf_keys=["name"],
         cvt_dict={"*": _as_int_when_possible},

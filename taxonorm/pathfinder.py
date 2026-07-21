@@ -7,7 +7,6 @@ project_dir = Path(__file__).resolve().parent.parent
 
 examples_dir              = project_dir / 'Examples'  # readme examples and other examples
 tests_dir                 = project_dir / 'Tests'     # pytest test folder
-temp_dir                  = project_dir / 'Temp'      # general temp folde
 
 samples_dir               = project_dir / 'Samples'   # taxonomy samples in supported style and format
 scripts_dir               = project_dir / 'Samples' / 'Scripts'  # scripts to generate or validate samples
