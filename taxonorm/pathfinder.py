@@ -50,6 +50,10 @@ def setup_folder(folder: Path | str) -> None:
     if not folder.exists():
         folder.mkdir()
     else:
-        for item in folder.iterdir():
-            if item.is_file():
-                item.unlink()
+        if folder.is_dir():
+            for item in folder.iterdir():
+                if item.is_file():
+                    item.unlink()
+            print(f"Folder {folder} is cleared and ready for use.")
+        else:
+            print(f'Error: {folder} is a file, not a folder.')
