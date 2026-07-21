@@ -5,7 +5,7 @@ import json
 from colorama import Fore, just_fix_windows_console
 from taxonorm.utils import get_style_from_hints
 from taxonorm import import_taxonomy, export_taxonomy, renumber_taxonomy_ids
-from taxonorm.pathfinder import (setup_folder, variants_tmp_dir, SHORT_2L_NU_IP_H_K_T_XLSX, SHORT_2L_U_IP_H_K_T_XLSX,
+from taxonorm.pathfinder import (setup_tmp_folder, variants_tmp_dir, SHORT_2L_NU_IP_H_K_T_XLSX, SHORT_2L_U_IP_H_K_T_XLSX,
                                  patterns_tmp_dir)
 
 just_fix_windows_console()  # colorama activation
@@ -29,7 +29,7 @@ U_TAXONOMY =  'SHORT_2L_U.json'
 NU_TAXONOMY = 'SHORT_2L_NU.json'
 
 out_path = variants_tmp_dir
-setup_folder(out_path)
+setup_tmp_folder(out_path)
 
 u_taxonomy_file  = patterns_tmp_dir / U_TAXONOMY
 nu_taxonomy_file  = patterns_tmp_dir / NU_TAXONOMY

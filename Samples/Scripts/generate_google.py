@@ -3,7 +3,7 @@ from taxonorm.reader import import_taxonomy
 from taxonorm.common import IpStyle, LpStyle
 from taxonorm.model import Taxonomy
 from taxonorm.utils import  get_style_from_hints as hinter
-from taxonorm.pathfinder import FULL_3L_LP_I_NS_XLSX, google_tmp_dir, setup_folder
+from taxonorm.pathfinder import FULL_3L_LP_I_NS_XLSX, google_tmp_dir, setup_tmp_folder
 
 from pathlib import Path
 
@@ -24,7 +24,7 @@ cvt_dict = {'*':cvt}
 source = FULL_3L_LP_I_NS_XLSX
 
 out_path = google_tmp_dir
-setup_folder(out_path)
+setup_tmp_folder(out_path)
 
 ip_h_k_t = IpStyle(header=True, keys=True, tabbed=True)
 ip_name = '_'.join(ip_h_k_t.hints)

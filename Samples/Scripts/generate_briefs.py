@@ -5,7 +5,7 @@ import json
 from colorama import Fore, just_fix_windows_console
 from taxonorm.utils import get_style_from_hints
 from taxonorm import import_taxonomy, export_taxonomy
-from taxonorm.pathfinder import setup_folder, patterns_tmp_dir, BRIEF_3L_IP_H_K_T_XLSX, variants_tmp_dir
+from taxonorm.pathfinder import setup_tmp_folder, patterns_tmp_dir, BRIEF_3L_IP_H_K_T_XLSX, variants_tmp_dir
 
 just_fix_windows_console()  # colorama activation
 red = Fore.LIGHTRED_EX
@@ -27,7 +27,7 @@ pattern = BRIEF_3L_IP_H_K_T_XLSX
 
 out_path = variants_tmp_dir
 
-setup_folder(out_path)
+setup_tmp_folder(out_path)
 
 taxonomy_file  = patterns_tmp_dir / TAXONOMY
 
