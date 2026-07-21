@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from Examples.benchmark_model import (
+from benchmark_model import (
     compare_memory,
     make_balanced_branches,
     make_deep_branches,
