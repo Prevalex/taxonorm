@@ -7,11 +7,11 @@ from pathlib import Path
 project_dir = Path(__file__).resolve().parent.parent
 
 examples_dir              = project_dir / 'Examples'
-scripts_dir               = project_dir / 'Scripts'
 tests_dir                 = project_dir / 'Tests'
 temp_dir                  = project_dir / 'Temp'
 
 samples_dir               = project_dir / 'Samples'
+scripts_dir               = project_dir / 'Samples' / 'Scripts'
 
 variants_dir              = project_dir / 'Samples' / 'Variants'
 shorts_dir                = project_dir / 'Samples' / 'Variants' / 'Shorts'
