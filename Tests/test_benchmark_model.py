@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from benchmark_model import (
+from taxonorm.benchmark_model import (
     compare_memory,
     make_balanced_branches,
     make_deep_branches,
