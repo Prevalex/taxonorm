@@ -13,13 +13,14 @@ from .model import Taxonomy, TaxonomyBranch, TaxonomyNode
 from .viewer import (
     render_text_tree,
     save_text_tree,
+    to_rich_tree,
     view_live_html_tree,
     view_live_text_tree,
     view_text_tree,
 )
 from .common import IpStyle, LpStyle
 from .chunks import restore_unique_ip_chunks, split_to_unique_ip_chunks
-from .adapters import to_bigtree, to_networkx
+from .adapters import from_bigtree, to_bigtree, to_networkx
 from .errors import TxInputValidationError
 from .stylers.style_lp_ni import renumber_taxonomy_ids
 from .input_validation import (
@@ -41,6 +42,7 @@ __all__ = [
     "renumber_taxonomy_ids",
     "restore_unique_ip_chunks",
     "split_to_unique_ip_chunks",
+    "from_bigtree",
     "to_bigtree",
     "to_networkx",
     "validate_input",
@@ -51,6 +53,7 @@ __all__ = [
     "import_taxonomy",
     "serialize_taxonomy",
     "render_text_tree",
+    "to_rich_tree",
     "save_text_tree",
     "view_text_tree",
     "view_live_text_tree",

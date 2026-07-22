@@ -4,7 +4,7 @@ import json
 
 from colorama import Fore, just_fix_windows_console
 from taxonorm.utils import get_style_from_hints
-from taxonorm import import_taxonomy, export_taxonomy, renumber_taxonomy_ids
+from taxonorm import export_taxonomy, import_taxonomy
 from taxonorm.pathfinder import (setup_tmp_folder, variants_tmp_dir, SHORT_2L_NU_IP_H_K_T_XLSX, SHORT_2L_U_IP_H_K_T_XLSX,
                                  patterns_tmp_dir)
 

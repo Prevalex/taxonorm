@@ -1,9 +1,15 @@
 #!python
-"""Export a taxonomy to networkx and bigtree."""
+"""Export a taxonomy to networkx and round-trip it through bigtree."""
 
 from __future__ import annotations
 
-from taxonorm import IpStyle, import_taxonomy, to_bigtree, to_networkx
+from taxonorm import (
+    IpStyle,
+    from_bigtree,
+    import_taxonomy,
+    to_bigtree,
+    to_networkx,
+)
 
 from sample_common import LEAF_KEYS, SAMPLE_IP_H_K_T, as_int_when_possible
 
@@ -20,6 +26,7 @@ print(graph.number_of_nodes(), graph.number_of_edges())
 print(graph.nodes[(1, 12, 22, 31)]["label"])
 
 tree = to_bigtree(taxonomy, label_key="en_US")
+restored = from_bigtree(tree)
 node_by_path = {
     node.id_path: node
     for node in tree.preorder_iter()
@@ -27,3 +34,4 @@ node_by_path = {
 }
 print(tree.node.node_name)
 print(node_by_path[(1, 12, 22, 31)].label)
+print("round-trip:", restored == taxonomy)

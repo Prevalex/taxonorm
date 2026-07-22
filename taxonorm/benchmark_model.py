@@ -90,7 +90,7 @@ def make_balanced_branches(branching: int = 4, depth: int = 6) -> BranchTable:
     if branching < 1 or depth < 0:
         raise ValueError("branching must be positive and depth must be non-negative")
     branches: BranchTable = []
-    level = [(0,)]
+    level: list[tuple[int, ...]] = [(0,)]
     for current_depth in range(depth + 1):
         next_level: list[tuple[int, ...]] = []
         for path in level:

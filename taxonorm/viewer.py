@@ -53,63 +53,101 @@ def _iter_children(
     return items
 
 
-def render_text_tree(
+def to_rich_tree(
     taxonomy: Taxonomy,
     *,
-    label: str = "Taxonomy",
+    label: Any = "Taxonomy",
     leaf_key: LeafKey | None = None,
     missed_leaf: MissedLeaf = "auto",
     sort: bool = False,
     formatter: LabelFormatter | None = None,
+    markup: bool = False,
 ) -> Any:
-    """Build a Rich tree for *taxonomy* without printing it.
+    """Export *taxonomy* as a :class:`rich.tree.Tree` renderable.
 
     By default node labels are node IDs.  Pass ``leaf_key`` to display the
     selected leaf value at each node instead, for example ``leaf_key="name"``.
     The underlying structure still follows the native ``Taxonomy`` tree, so
-    sibling nodes with equal display labels remain distinct.
+    sibling nodes with equal display labels remain distinct.  String labels
+    are treated as literal text by default; pass ``markup=True`` to interpret
+    Rich console markup returned by ``formatter`` or supplied as ``label``.
     """
     _ensure_taxonomy(taxonomy)
     try:
+        from rich.text import Text as RichText
         from rich.tree import Tree as RichTree
     except ImportError as exc:  # pragma: no cover - depends on environment
         raise RuntimeError(
-            'Install the "rich" dependency to use view_text_tree().'
+            'Install the "rich" dependency to use to_rich_tree().'
         ) from exc
 
-    tree = RichTree(label)
+    def rich_label(value: Any) -> Any:
+        if isinstance(value, str) and not markup:
+            return RichText(value)
+        return value
 
-    def add_nodes(
-        branch: Any,
-        children: Mapping[NodeId, TaxonomyNode],
-        parent_path: IdPath,
-    ) -> None:
+    tree = RichTree(rich_label(label))
+
+    pending: list[
+        tuple[Any, Mapping[NodeId, TaxonomyNode], IdPath]
+    ] = [(tree, taxonomy.roots, ())]
+    while pending:
+        branch, children, parent_path = pending.pop()
+        added: list[tuple[Any, TaxonomyNode, IdPath]] = []
         for node_id, node in _iter_children(children, sort=sort):
             path = parent_path + (node_id,)
             child = branch.add(
-                _display_label(
-                    taxonomy,
-                    path,
-                    node,
-                    leaf_key=leaf_key,
-                    missed_leaf=missed_leaf,
-                    formatter=formatter,
+                rich_label(
+                    _display_label(
+                        taxonomy,
+                        path,
+                        node,
+                        leaf_key=leaf_key,
+                        missed_leaf=missed_leaf,
+                        formatter=formatter,
+                    )
                 )
             )
-            add_nodes(child, node.children, path)
+            added.append((child, node, path))
+        pending.extend(
+            (child, node.children, path)
+            for child, node, path in reversed(added)
+        )
 
-    add_nodes(tree, taxonomy.roots, ())
     return tree
+
+
+def render_text_tree(
+    taxonomy: Taxonomy,
+    *,
+    label: Any = "Taxonomy",
+    leaf_key: LeafKey | None = None,
+    missed_leaf: MissedLeaf = "auto",
+    sort: bool = False,
+    formatter: LabelFormatter | None = None,
+    markup: bool = False,
+) -> Any:
+    """Compatibility name for :func:`to_rich_tree`."""
+    return to_rich_tree(
+        taxonomy,
+        label=label,
+        leaf_key=leaf_key,
+        missed_leaf=missed_leaf,
+        sort=sort,
+        formatter=formatter,
+        markup=markup,
+    )
 
 
 def view_text_tree(
     taxonomy: Taxonomy,
     *,
-    label: str = "Taxonomy",
+    label: Any = "Taxonomy",
     leaf_key: LeafKey | None = None,
     missed_leaf: MissedLeaf = "auto",
     sort: bool = False,
     formatter: LabelFormatter | None = None,
+    markup: bool = False,
 ) -> Any:
     """Print *taxonomy* as a static Rich text tree and return the Rich tree."""
     try:
@@ -126,6 +164,7 @@ def view_text_tree(
         missed_leaf=missed_leaf,
         sort=sort,
         formatter=formatter,
+        markup=markup,
     )
     RichConsole().print(tree)
     return tree
@@ -135,11 +174,12 @@ def save_text_tree(
     taxonomy: Taxonomy,
     filename: str | Path = "$taxonomy$.txt",
     *,
-    label: str = "Taxonomy",
+    label: Any = "Taxonomy",
     leaf_key: LeafKey | None = None,
     missed_leaf: MissedLeaf = "auto",
     sort: bool = False,
     formatter: LabelFormatter | None = None,
+    markup: bool = False,
     width: int = 120,
 ) -> Path:
     """Save a static Rich text tree to *filename* and return the path."""
@@ -158,6 +198,7 @@ def save_text_tree(
         missed_leaf=missed_leaf,
         sort=sort,
         formatter=formatter,
+        markup=markup,
     )
     with path.open("w", encoding="utf-8") as stream:
         RichConsole(file=stream, force_terminal=True, width=width).print(tree)

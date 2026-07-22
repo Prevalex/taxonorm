@@ -6,7 +6,6 @@ formats. The public API accepts and returns `Taxonomy`. The branch table
 representation `[id1, ..., idN, {leaf_key: value}]` is used at parser,
 serializer, import, and export boundaries.
 
-Russian documentation is preserved in [README.ru.md](README.ru.md).
 Conceptual terminology and style names are introduced in [CONCEPT.md](CONCEPT.md).
 Terminology for future documentation and message translation is tracked in
 [docs/GLOSSARY.md](docs/GLOSSARY.md).
@@ -38,13 +37,15 @@ Small runnable examples live in `Examples/`:
 - [sample_chunks.py](Examples/sample_chunks.py) restores and splits unique-ID
   IP chunks;
 - [sample_adapters.py](Examples/sample_adapters.py) exports a taxonomy to
-  `networkx` and `bigtree`;
+  `networkx` and round-trips it through `bigtree`;
 - [sample_export.py](Examples/sample_export.py) exports the same taxonomy to
   another style;
 - [sample_validate.py](Examples/sample_validate.py) prints a user-facing
   validation report;
 - [view_taxonomy.py](Examples/view_taxonomy.py) is a tree viewer utility with
-  `text`, `interactive`, and `pyvis` modes.
+  `text`, `interactive`, and `pyvis` modes;
+- [view_directory.py](Examples/view_directory.py) models a filesystem directory
+  as a `Taxonomy` and renders it as a Rich tree.
 
 ### Core Model
 
@@ -678,6 +679,7 @@ the operation does nothing and returns the existing node.
 
 ```python
 from taxonorm import (
+    to_rich_tree,
     view_live_html_tree,
     view_live_text_tree,
     view_text_tree,
@@ -685,6 +687,8 @@ from taxonorm import (
 
 view_text_tree(taxonomy)                   # static terminal tree
 view_text_tree(taxonomy, leaf_key="en_US") # display names instead of IDs
+
+rich_tree = to_rich_tree(taxonomy, leaf_key="en_US")
 
 view_live_text_tree(taxonomy, leaf_key="en_US")  # interactive TUI
 
@@ -699,19 +703,40 @@ By default, node labels are IDs. Pass `leaf_key` to label each node with the
 selected leaf value. The underlying structure remains the native `Taxonomy`
 tree, so equal labels do not collapse distinct nodes.
 
-`render_text_tree()` returns a Rich tree without printing it. `save_text_tree()`
-saves a text tree to a file.
+`to_rich_tree()` returns a `rich.tree.Tree` without printing it.
+`render_text_tree()` is its compatibility name, and `save_text_tree()` saves
+the rendered tree to a file. String labels are literal by default, so IDs and
+leaf values containing Rich markup characters are preserved. Pass
+`markup=True` only when a formatter intentionally returns Rich markup.
+
+Install only Rich support with:
+
+```shell
+pip install "taxonorm[rich]"
+```
+
+`Examples/view_directory.py` adapts the idea of Rich's filesystem tree example:
+directory-entry names become node IDs, while `kind`, `path`, `size`, `suffix`,
+and scan errors are stored as leaves. Rendering is a separate step, so the
+result can also be validated, traversed, exported, or converted to bigtree.
+
+```shell
+python Examples/view_directory.py taxonorm --max-depth 2
+```
 
 ### Graph and Tree Library Adapters
 
-`to_networkx()` and `to_bigtree()` export a taxonomy to optional third-party
-libraries:
+`to_networkx()` exports a taxonomy to NetworkX. `to_bigtree()` and
+`from_bigtree()` provide bidirectional in-memory conversion for bigtree:
 
 ```python
-from taxonorm import to_bigtree, to_networkx
+from taxonorm import from_bigtree, to_bigtree, to_networkx
 
 graph = to_networkx(taxonomy, label_key="en_US")
 tree = to_bigtree(taxonomy, label_key="en_US")
+restored = from_bigtree(tree)
+
+assert restored == taxonomy
 ```
 
 Install the optional dependencies when you need these adapters:
@@ -725,12 +750,29 @@ pip install "taxonorm[tree]"
 Node attributes include `node_id`, `id_path`, `depth`, `leaves`, and `label`.
 This preserves repeated local IDs without changing the taxonomy.
 
-`bigtree` requires string node names and a single root, so `to_bigtree()` puts
-the taxonomy under a synthetic root named `"Taxonomy"`. Original IDs and paths
-are preserved as `node_id` and `id_path`. Leaf dictionaries are stored as
-`leaf_values` because `bigtree` already uses `leaves` for its own API.
+The public bigtree model uses string node names and a single root, so
+`to_bigtree()` puts the taxonomy under a synthetic root named `"Taxonomy"` and
+uses collision-free technical node names by default. Original IDs and leaves
+are preserved in versioned `_taxonorm` metadata and exposed through editable
+`node_id` and `leaf_values` exchange attributes. `id_path` is also available
+for inspection; `leaf_values` avoids a collision with bigtree's own `leaves`
+API. On import, the editable exchange attributes take precedence over their
+metadata backup.
 
-Both adapters support an explicit renumbering mode:
+`from_bigtree()` automatically removes a synthetic root created by taxonorm.
+It rebuilds paths from the current bigtree parent/child links rather than from
+stored `id_path` attributes, so node moves are imported correctly. Native
+bigtree trees without taxonorm metadata are also accepted: node names become
+string IDs, and `attribute_map` can select attributes to import as leaves.
+
+```python
+native = from_bigtree(
+    bigtree_tree,
+    attribute_map={"description": "description"},
+)
+```
+
+Both export adapters support an explicit renumbering mode:
 
 ```python
 renumbered_graph = to_networkx(taxonomy, renumber=True)

@@ -30,7 +30,8 @@ twine check dist/*
 
 - `taxonorm[excel]`: XLS/XLSX read/write support.
 - `taxonorm[xml]`: XML read support.
-- `taxonorm[view]`: terminal and HTML tree viewers.
+- `taxonorm[rich]`: static Rich tree export and rendering.
+- `taxonorm[view]`: all terminal and HTML tree viewers.
 - `taxonorm[graph]`: `networkx` adapter.
 - `taxonorm[tree]`: `bigtree` adapter.
 - `taxonorm[pandas]`: `pandas.DataFrame` import support.

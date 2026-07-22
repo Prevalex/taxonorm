@@ -4,8 +4,6 @@ This document introduces the conceptual model and terminology used by
 `taxonorm`.  It is meant to be read before the README when the style names
 (`IP`, `LP`, `sparse`, `tabbed`, `chunks`) are still unfamiliar.
 
-The original Russian version is kept as [CONCEPT.ru.md](CONCEPT.ru.md).
-
 ## Taxonomy
 
 In `taxonorm`, a taxonomy is a hierarchical structure: a tree, or more
@@ -400,3 +398,25 @@ keys.  This is normal Python behavior and applies to node IDs and leaf keys.
 
 The README contains practical API examples for these operations.  This
 document explains the terms used by those examples.
+
+## Third-Party Tree Representations
+
+`Taxonomy` remains the canonical model when taxonorm interoperates with other
+tree libraries. Adapters create independent representations; they do not
+replace the model used by parsers, validators, serializers, or writers.
+
+The bigtree adapter uses a synthetic root because bigtree represents one
+rooted tree while a `Taxonomy` may be empty or contain several roots. Original
+hashable IDs and leaf mappings are carried as exchange metadata because
+bigtree's public path model is based on string node names. Importing a bigtree
+tree rebuilds ID paths from its current parent/child relationships.
+
+A Rich tree is a presentation renderable rather than a taxonomy storage model.
+`to_rich_tree()` is therefore intentionally one-way: it selects display labels
+and returns a `rich.tree.Tree`, while semantic IDs and leaves stay in the source
+`Taxonomy`.
+
+The NetworkX adapter is also intentionally one-way for version 0.1.0. A
+taxonomy is exported as a directed forest using full ID paths as graph node
+keys. Importing arbitrary graphs would require additional policies for cycles,
+multiple parents, and DAGs that are outside the canonical taxonomy invariants.

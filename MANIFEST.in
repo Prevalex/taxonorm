@@ -1,7 +1,5 @@
 include README.md
-include README.ru.md
 include CONCEPT.md
-include CONCEPT.ru.md
 include CHANGELOG.md
 include LICENSE
 include pyproject.toml
@@ -11,7 +9,6 @@ include ruff.toml
 
 recursive-include docs *.md
 recursive-include Examples *.py
-recursive-include Tests *.py
 
 recursive-include Samples/Patterns *.json
 recursive-include Samples/Variants/Briefs *.csv *.xls *.xlsx *.json

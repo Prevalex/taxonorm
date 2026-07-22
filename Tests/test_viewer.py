@@ -9,6 +9,7 @@ from taxonorm import (
     Taxonomy,
     render_text_tree,
     save_text_tree,
+    to_rich_tree,
     view_live_html_tree,
     view_text_tree,
 )
@@ -48,6 +49,48 @@ def test_render_text_tree_can_use_leaf_labels_without_collapsing_nodes() -> None
     assert "Каталог" in text
     assert "Телефоны" in text
     assert text.count("Аксессуары") == 2
+
+
+def test_to_rich_tree_treats_string_labels_as_literal_text() -> None:
+    taxonomy = Taxonomy.from_branches(
+        [["[literal]", {"name": "[red]Danger[/red]"}]]
+    )
+
+    text = _render_to_text(
+        to_rich_tree(taxonomy, label="[root]", leaf_key="name")
+    )
+
+    assert "[root]" in text
+    assert "[red]Danger[/red]" in text
+
+
+def test_to_rich_tree_can_opt_in_to_markup() -> None:
+    taxonomy = Taxonomy.from_branches([["root", {"name": "Name"}]])
+
+    text = _render_to_text(
+        to_rich_tree(
+            taxonomy,
+            leaf_key="name",
+            formatter=lambda path, node, label: f"[red]{label}[/red]",
+            markup=True,
+        )
+    )
+
+    assert "Name" in text
+    assert "[red]" not in text
+
+
+def test_to_rich_tree_handles_deep_taxonomy_without_recursion() -> None:
+    path = tuple(range(1_200))
+    taxonomy = Taxonomy.from_branches([[*path, {}]])
+
+    branch = to_rich_tree(taxonomy)
+
+    depth = 0
+    while branch.children:
+        branch = branch.children[0]
+        depth += 1
+    assert depth == len(path)
 
 
 def test_view_text_tree_prints_and_returns_tree(capsys: pytest.CaptureFixture[str]) -> None:
