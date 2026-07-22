@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.1 - 2026-07-22
+
+Packaging metadata update for the first PyPI publication.
+
+- Added public Documentation, Homepage, Issues, and Repository links.
+- Pointed the Documentation link to `CONCEPT.md`.
+
 ## 0.1.0 - 2026-07-22
 
 Initial public-package preparation snapshot.
