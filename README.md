@@ -814,6 +814,10 @@ export_taxonomy(
 )
 ```
 
+For XLS and XLSX output, Python strings are stored with Excel's explicit Text
+format (`@`). String IDs therefore keep leading zeroes when the file is opened
+in Excel, while numeric IDs remain numeric cells.
+
 See [Examples/sample_export.py](Examples/sample_export.py) for an export
 example that does not write into the project working directory.
 `serialize_taxonomy()` without file output is shown in

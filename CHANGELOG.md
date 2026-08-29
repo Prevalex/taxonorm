@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.2 - Unreleased
+
+- Store strings with Excel's Text (`@`) cell format in XLS and XLSX exports,
+  preserving leading zeroes in string IDs.
+
 ## 0.1.1 - 2026-07-22
 
 Packaging metadata update for the first PyPI publication.

@@ -2,15 +2,15 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-from typing import Any, Callable, TypeGuard, cast
 import csv
 import json
+from pathlib import Path
+from typing import Any, Callable, TypeGuard, cast
 
-from .common import R_CODEPAGE, W_CODEPAGE, UTF8_BOM
 from ._mapping import MappingError, apply_cvt_dict_to_llist
 from ._sequences import is_empty_list
 from ._validation import is_empty
+from .common import R_CODEPAGE, UTF8_BOM, W_CODEPAGE
 
 _MISSING = object()
 
@@ -630,8 +630,16 @@ def save_llist_to_xlsx_file(
     if worksheet is None:
         raise TableFormatError("XLSX workbook has no active worksheet")
     worksheet.title = sheet or "Sheet1"
-    for row in rows:
-        worksheet.append(row)
+    for row_index, row in enumerate(rows, start=1):
+        for column_index, value in enumerate(row, start=1):
+            cell = worksheet.cell(
+                row=row_index,
+                column=column_index,
+                value=value,
+            )
+            if isinstance(value, str):
+                cell.number_format = "@"
+                cell.data_type = "s"
     workbook.save(add_ext(filename, ".xlsx"))
 
 
@@ -647,9 +655,13 @@ def save_llist_to_xls_file(
         raise TableFormatError("xlwt package is required for XLS writing") from err
     workbook = xlwt.Workbook()
     worksheet = workbook.add_sheet(sheet or "Sheet1")
+    text_style = xlwt.easyxf(num_format_str="@")
     for row_index, row in enumerate(rows):
         for column_index, value in enumerate(row):
-            worksheet.write(row_index, column_index, value)
+            if isinstance(value, str):
+                worksheet.write(row_index, column_index, value, text_style)
+            else:
+                worksheet.write(row_index, column_index, value)
     workbook.save(add_ext(filename, ".xls"))
 
 
